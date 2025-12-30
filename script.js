@@ -1,3 +1,23 @@
+// This ensures the button can always find the login function
+window.attemptLogin = function() {
+    const passwordField = document.getElementById('pass-input');
+    const errorMsg = document.getElementById('login-error');
+    
+    // Replace 'admin123' with your chosen password
+    if (passwordField.value === "Cyber$supe73r") {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        sessionStorage.setItem('isLoggedIn', 'true');
+        
+        // Trigger data fetch if it exists
+        if (typeof window.fetchReports === 'function') {
+            window.fetchReports();
+        }
+    } else {
+        if (errorMsg) errorMsg.style.display = 'block';
+        alert("Invalid Access Key");
+    }
+};
 window.attemptLogin = function() {
     const pass = document.getElementById('pass-input').value;
     if (pass === "admin123") { // Matches your access key
