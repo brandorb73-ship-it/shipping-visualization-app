@@ -7,7 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
     <link rel="stylesheet" href="style.css">
+    
     <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
@@ -15,12 +17,12 @@
     <div id="login-overlay">
         <div class="login-card">
             <div id="logo-drop-zone" onclick="document.getElementById('login-logo-upload').click()">
-                <img id="login-display-logo" src="" style="display:none;">
+                <img id="login-display-logo" src="" style="display:none; max-width:100%; height:auto;">
                 <span id="login-logo-placeholder">+ Upload Corporate Logo</span>
             </div>
             <input type="file" id="login-logo-upload" hidden onchange="window.handleLogoUpload(this)">
-            <h2 class="brand-name">BrandOrb</h2>
-            <input type="password" id="pass-input" placeholder="Enter Access Key">
+            <h2 style="margin-bottom:20px;">BrandOrb</h2>
+            <input type="password" id="pass-input" placeholder="Enter Access Key" style="display:block; width:100%; margin-bottom:15px; padding:12px; border:1px solid #ddd; border-radius:6px;">
             <button class="btn-login" onclick="window.attemptLogin()">Secure Login</button>
         </div>
     </div>
@@ -29,17 +31,12 @@
         <aside id="sidebar">
             <div class="sidebar-logo-area">
                 <div class="logo-box-white">
-                    <img class="global-logo-src" id="sidebar-logo" src="" style="display:none;">
+                    <img class="global-logo-src" src="" style="display:none; width:80%; height:80%; object-fit:contain;">
                 </div>
             </div>
             <nav class="nav-menu">
-                <div class="sidebar-header">ANALYTICS</div>
-                <a href="#" class="nav-link active" id="nav-map" onclick="window.showPage('map')">
-                    <i class="fas fa-route"></i> Route Reports
-                </a>
-                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')">
-                    <i class="fas fa-project-diagram"></i> Cluster Graphs
-                </a>
+                <a href="#" class="nav-link active" onclick="window.showPage('map')"><i class="fas fa-route"></i> Route Reports</a>
+                <a href="#" class="nav-link" onclick="window.showPage('cluster')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
             </nav>
         </aside>
 
@@ -50,13 +47,9 @@
                     <p>INTELLIGENCE DASHBOARD</p>
                 </div>
                 <div class="header-actions">
-                    <select id="client-select"><option value="General">General</option></select>
-                    <button class="btn-icon" onclick="window.addNewClient()" title="Add Client">
-                        <i class="fas fa-user-plus"></i>
-                    </button>
-                    <button class="btn-primary-add" onclick="window.openModal()">
-                        <i class="fas fa-plus"></i> Add Report
-                    </button>
+                    <select id="client-select" style="padding:8px; border-radius:6px;"><option value="General">General</option></select>
+                    <button class="btn-icon" onclick="window.addNewClient()"><i class="fas fa-user-plus"></i></button>
+                    <button class="btn-primary-add" onclick="window.openModal()">+ Add Report</button>
                 </div>
             </header>
 
@@ -64,38 +57,30 @@
                 <div class="table-card">
                     <table class="corporate-table">
                         <thead>
-                            <tr>
-                                <th>Report</th>
-                                <th>Client</th>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th style="text-align:right">Action</th>
-                            </tr>
+                            <tr><th>Report</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr>
                         </thead>
                         <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="page-view" class="content-page" style="display:none;">
+            <div id="page-view" class="content-page" style="display:none; position:relative;">
                 <div class="viz-header">
                     <button onclick="window.goBackToList()" class="btn-back"><i class="fas fa-arrow-left"></i> Back</button>
                     <h2 id="viewing-title"></h2>
+                    <button id="zoom-fit-btn" style="display:none; margin-left:auto;" class="btn-icon" onclick="window.zoomToFit()"><i class="fas fa-expand-arrows-alt"></i></button>
                 </div>
                 <div id="map-element"></div>
             </div>
         </main>
     </div>
 
-    <div id="report-modal" class="modal">
+    <div id="report-modal" class="modal" style="display:none;">
         <div class="modal-content">
             <h3>Configure New Report</h3>
-            <div class="form-group"><label>Title</label><input type="text" id="rep-title"></div>
-            <div class="form-group"><label>CSV URL</label><input type="text" id="rep-url"></div>
-            <div class="form-group">
-                <label>Type</label>
-                <select id="rep-type"><option value="MAP">Map</option><option value="CLUSTER">Cluster</option></select>
-            </div>
+            <input type="text" id="rep-title" placeholder="Title">
+            <input type="text" id="rep-url" placeholder="CSV URL">
+            <select id="rep-type"><option value="MAP">Map</option><option value="CLUSTER">Cluster</option></select>
             <div class="modal-buttons">
                 <button onclick="window.saveNewReport()" class="btn-primary-add">Publish</button>
                 <button onclick="window.closeModal()">Cancel</button>
