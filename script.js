@@ -1,98 +1,129 @@
-// Make sure to replace this with your actual Deployment URL from Google Sheets
 const DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; 
 let reports = [];
 let selectedType = 'map';
 let mapInstance = null;
 
-// LOGO UPLOAD LOGIC
+// Initialize
+window.onload = () => {
+    loadSavedLogo();
+    fetchReports();
+};
+
+function showPage(pageId) {
+    document.querySelectorAll('.content-page').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + pageId).style.display = 'block';
+    // Clear map if moving away from view
+    if(pageId !== 'view' && mapInstance) {
+        mapInstance.remove();
+        mapInstance = null;
+    }
+}
+
+// LOGO LOGIC
 function handleLogoUpload(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const logoImg = document.getElementById('user-logo');
-            const placeholder = document.getElementById('logo-placeholder');
-            
-            logoImg.src = e.target.result;
-            logoImg.style.display = 'block';
-            placeholder.style.display = 'none';
-            
-            // Save to browser memory so it stays on refresh
-            localStorage.setItem('brandOrbLogo', e.target.result);
+        reader.onload = (e) => {
+            document.getElementById('user-logo').src = e.target.result;
+            document.getElementById('user-logo').style.display = 'block';
+            document.getElementById('logo-placeholder').style.display = 'none';
+            localStorage.setItem('bo-logo', e.target.result);
         };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
-// LOAD LOGO ON START
-window.addEventListener('DOMContentLoaded', () => {
-    const savedLogo = localStorage.getItem('brandOrbLogo');
-    if (savedLogo) {
-        const logoImg = document.getElementById('user-logo');
-        const placeholder = document.getElementById('logo-placeholder');
-        logoImg.src = savedLogo;
-        logoImg.style.display = 'block';
-        placeholder.style.display = 'none';
+function loadSavedLogo() {
+    const saved = localStorage.getItem('bo-logo');
+    if(saved) {
+        document.getElementById('user-logo').src = saved;
+        document.getElementById('user-logo').style.display = 'block';
+        document.getElementById('logo-placeholder').style.display = 'none';
     }
-    fetchReports();
-});
-
-// PAGE NAVIGATION
-function showPage(pageId) {
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    document.getElementById('page-' + pageId).style.display = 'block';
 }
 
-function selectType(type) {
-    selectedType = type;
-    document.getElementById('btn-map').classList.toggle('active', type === 'map');
-    document.getElementById('btn-cluster').classList.toggle('active', type === 'cluster');
+// CLIENT LOGIC
+function addNewClient() {
+    const name = prompt("Enter Client Name:");
+    if(name) {
+        const sel = document.getElementById('client-select');
+        const opt = document.createElement('option');
+        opt.value = name; opt.text = name;
+        sel.add(opt);
+    }
 }
 
-// REFRESH DATA FROM DRIVE
+// DATA SYNC
 async function fetchReports() {
     try {
         const response = await fetch(DB_URL);
         const data = await response.json();
-        reports = data.slice(1); // Exclude header
+        reports = data.slice(1);
         renderTable();
-    } catch (e) {
-        console.error("Error fetching reports:", e);
-    }
+    } catch (e) { console.error("Database offline"); }
 }
 
 function renderTable() {
     const tbody = document.getElementById('report-list-rows');
-    tbody.innerHTML = reports.map((r, index) => `
+    tbody.innerHTML = reports.map((r, i) => `
         <tr>
             <td><strong>${r[1]}</strong></td>
             <td>${r[4]}</td>
             <td>${r[5]}</td>
-            <td><span class="type-tag">${r[3]}</span></td>
-            <td>
-                <button class="tbl-btn" onclick="previewReport(${index})">View</button>
+            <td><span class="badge">${r[3]}</span></td>
+            <td style="text-align:right">
+                <button class="btn-primary" style="padding: 6px 12px; font-size:12px" onclick="previewReport(${i})">View</button>
+                <button class="btn-delete" onclick="deleteReport(${i})">Delete</button>
             </td>
         </tr>
     `).join('');
 }
 
-// SAVE NEW REPORT
-async function processAndSave() {
-    const title = document.getElementById('report-name').value;
-    const url = document.getElementById('sheet-url').value;
-    const client = document.getElementById('client-select').value;
-    
-    if(!title || !url) return alert("Please fill in Title and URL");
+// PREVIEW LOGIC
+function previewReport(index) {
+    const r = reports[index];
+    showPage('view');
+    document.getElementById('viewing-title').innerText = r[1];
 
-    const payload = {
-        target: "Reports",
-        data: [Date.now(), title, url, selectedType, client, new Date().toLocaleDateString()]
-    };
+    Papa.parse(r[2], {
+        download: true,
+        header: true,
+        complete: (results) => {
+            if(r[3] === 'map') renderCurvedMap(results.data);
+            else renderCluster(results.data);
+        }
+    });
+}
 
-    try {
-        await fetch(DB_URL, { method: 'POST', body: JSON.stringify(payload) });
-        alert("Report Published!");
-        location.reload(); // Refresh to show new data
-    } catch (e) {
-        alert("Error saving to Drive");
+function renderCurvedMap(data) {
+    document.getElementById('map-element').style.display = 'block';
+    document.getElementById('cluster-element').style.display = 'none';
+
+    mapInstance = L.map('map-element').setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(mapInstance);
+
+    data.forEach(d => {
+        const s = [parseFloat(d['Origin latitude']), parseFloat(d['Origin longitude'])];
+        const e = [parseFloat(d['Destination latitude']), parseFloat(d['Destination longitude'])];
+        
+        if(!s[0] || !e[0]) return;
+
+        // Draw Markers
+        L.circleMarker(s, {radius: 5, color: 'green'}).addTo(mapInstance).bindPopup(`Exporter: ${d.Exporter}`);
+        L.circleMarker(e, {radius: 5, color: 'red'}).addTo(mapInstance).bindPopup(`Importer: ${d.Importer}`);
+
+        // Curved Path calculation
+        const latlngs = [s, e];
+        const curve = L.polyline.antPath([s, [ (s[0]+e[0])/2 + 5, (s[1]+e[1])/2 ], e], {
+            "paused": false, "delay": 2500, "dashArray": [10, 20], "weight": 3, "color": "#0f172a", "pulseColor": "#38bdf8"
+        }).addTo(mapInstance);
+    });
+}
+
+async function deleteReport(index) {
+    if(confirm("Are you sure you want to delete this report?")) {
+        // In this version, we remove it locally. For Drive, you'd need a 'DELETE' post.
+        reports.splice(index, 1);
+        renderTable();
     }
 }
