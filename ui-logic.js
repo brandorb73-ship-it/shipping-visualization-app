@@ -29,7 +29,7 @@ window.ui = {
 
     loadData: async function() {
         // Replace with your actual Google Apps Script URL
-        const DB_URL = "YOUR_APPS_SCRIPT_URL_HERE";
+        const DB_URL = "https://script.google.com/macros/s/AKfycbzvnTinsKASNna9T_T9ODSy3FiBAU8BN-VciXWmbxdhGWaSUQKZmwnuT9nRW8kORq0/exec";
         try {
             const res = await fetch(DB_URL);
             const data = await res.json();
