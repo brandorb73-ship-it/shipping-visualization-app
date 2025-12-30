@@ -2,118 +2,128 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>BrandOrb - Supply Chain Intelligence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandOrb | Supply Chain Intelligence</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="dashboard">
-        <div id="sidebar">
-            <div class="logo-section" onclick="document.getElementById('logo-upload').click()">
-                <div class="logo-circle">
-                    <img id="user-logo" src="" style="display:none; width:100%; height:100%; object-fit: contain;">
-                    <span id="logo-placeholder">LOGO</span>
+    <div id="app-container">
+        <aside id="sidebar">
+            <div class="brand-area" onclick="document.getElementById('logo-upload').click()">
+                <div class="logo-box">
+                    <img id="user-logo" src="" style="display:none;">
+                    <span id="logo-placeholder">BO</span>
+                </div>
+                <div class="brand-text">
+                    <span class="company-name">BrandOrb</span>
+                    <span class="service-tag">Supply Chain Intelligence</span>
                 </div>
                 <input type="file" id="logo-upload" hidden accept="image/*" onchange="handleLogoUpload(this)">
             </div>
             
-            <nav class="sidebar-nav">
-                <div class="nav-group">
-                    <div class="nav-header">ADMINISTRATION</div>
-                    <div class="nav-item">Accounts</div>
-                    <div class="nav-item">Users</div>
-                </div>
-
-                <div class="nav-group">
-                    <div class="nav-header">ANALYTICS</div>
-                    <div class="nav-item active" onclick="showPage('list')">Route Reports ▾</div>
-                    <div id="route-map-list" class="report-dropdown"></div>
-                    
-                    <div class="nav-item" onclick="showPage('list')">Cluster Graphs ▾</div>
-                    <div id="cluster-report-list" class="report-dropdown"></div>
-                </div>
-            </nav>
-        </div>
-
-        <div id="main-content">
-            <div id="top-header">
-                <div class="breadcrumb">BrandOrb - Supply Chain Intelligence</div>
+            <nav class="nav-menu">
+                <div class="nav-section">ADMINISTRATION</div>
+                <a href="#" class="nav-link">Accounts</a>
+                <a href="#" class="nav-link">Users</a>
                 
-                <div class="top-right-controls">
-                    <div class="client-filter-box">
+                <div class="nav-section">ANALYTICS</div>
+                <a href="#" class="nav-link active" onclick="showPage('list')">Route Reports</a>
+                <div id="sidebar-route-list" class="sub-nav"></div>
+                
+                <a href="#" class="nav-link" onclick="showPage('list')">Cluster Graphs</a>
+                <div id="sidebar-cluster-list" class="sub-nav"></div>
+            </nav>
+        </aside>
+
+        <main id="main-wrapper">
+            <header id="top-nav">
+                <div class="page-title">Dashboard Overview</div>
+                <div class="header-controls">
+                    <div class="client-pill">
                         <select id="client-select">
                             <option value="All">All Clients</option>
                         </select>
-                        <button class="action-btn-small" onclick="addNewClient()" title="Add Client">+</button>
+                        <button class="icon-add" onclick="addNewClient()">+</button>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div class="action-bar">
-                <div class="search-wrapper">
-                    <input type="text" id="main-search" placeholder="Search reports..." onkeyup="filterTable()">
+            <section class="action-bar">
+                <div class="search-container">
+                    <input type="text" id="main-search" placeholder="Filter reports by title or client..." onkeyup="filterTable()">
                 </div>
-                <button class="add-report-btn" onclick="showPage('create')">+ Add New Report</button>
-            </div>
+                <button class="btn-primary" onclick="showPage('create')">+ Add New Report</button>
+            </section>
 
-            <div id="page-list" class="page">
-                <div class="table-container">
-                    <table class="pro-table">
+            <div id="page-list" class="content-page">
+                <div class="card-table-wrapper">
+                    <table class="main-table">
                         <thead>
                             <tr>
                                 <th>Report Title</th>
                                 <th>Client</th>
-                                <th>Created</th>
+                                <th>Date Created</th>
                                 <th>Type</th>
-                                <th>Action</th>
+                                <th style="text-align:right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="report-list-rows"></tbody>
+                        <tbody id="report-list-rows">
+                            </tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="page-create" class="page" style="display:none;">
-                <div class="create-card">
-                    <h3>Configure New Intelligence Report</h3>
+            <div id="page-create" class="content-page" style="display:none;">
+                <div class="form-container">
+                    <div class="form-header">
+                        <h2>Configure Intelligence Report</h2>
+                        <p>Link your Google Sheet CSV to generate interactive visualizations.</p>
+                    </div>
                     <div class="form-grid">
-                        <div class="input-field">
+                        <div class="field">
                             <label>Report Title</label>
-                            <input type="text" id="report-name" placeholder="Enter Name">
+                            <input type="text" id="report-name" placeholder="Enter a descriptive title">
                         </div>
-                        <div class="input-field">
-                            <label>Google Sheet URL (CSV Link)</label>
-                            <input type="text" id="sheet-url" placeholder="Paste link here">
+                        <div class="field">
+                            <label>Google Sheet URL (CSV Format)</label>
+                            <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
                         </div>
                     </div>
                     
-                    <div class="type-selection-area">
-                        <label>Visualization Type</label>
-                        <div class="type-row">
-                            <button id="btn-map" class="type-btn active" onclick="selectType('map')">Route Map</button>
-                            <button id="btn-cluster" class="type-btn" onclick="selectType('cluster')">Cluster Graph</button>
+                    <div class="visual-picker">
+                        <label>Select Visualization Type</label>
+                        <div class="picker-grid">
+                            <div class="picker-card active" id="pick-map" onclick="selectType('map')">
+                                <h3>Route Map</h3>
+                                <p>Dynamic flow lines between Origin and Destination ports.</p>
+                            </div>
+                            <div class="picker-card" id="pick-cluster" onclick="selectType('cluster')">
+                                <h3>Cluster Graph</h3>
+                                <p>Relational network grouping Exporters and Importers by country.</p>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-footer">
-                        <button class="save-btn-primary" onclick="processAndSave()">Publish to Dashboard</button>
-                        <button class="cancel-link" onclick="showPage('list')">Cancel</button>
+                        <button class="btn-save" onclick="processAndSave()">Publish Report</button>
+                        <button class="btn-cancel" onclick="showPage('list')">Cancel</button>
                     </div>
                 </div>
             </div>
 
-            <div id="page-view" class="page" style="display:none;">
+            <div id="page-view" class="content-page" style="display:none;">
                 <div class="viz-header">
-                    <button class="back-link" onclick="showPage('list')">← Back to Dashboard</button>
+                    <button class="btn-back" onclick="showPage('list')">← Back</button>
                     <h2 id="viewing-title">Report Title</h2>
                 </div>
-                <div id="viz-container">
+                <div id="viz-frame">
                     <div id="map-element"></div>
                     <div id="cluster-element" style="display:none;"></div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
