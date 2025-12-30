@@ -1,66 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Route Reports Pro</title>
+    <meta charset="UTF-8">
+    <title>Route Reports Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 </head>
 <body>
-    <div id="sidebar">
-        <div class="logo-section">
-            <input type="file" id="logo-input" style="display:none" onchange="uploadLogo(event)">
-            <img id="logo-img" src="https://via.placeholder.com/50" onclick="document.getElementById('logo-input').click()" title="Click to upload logo">
-            <h3 id="logo-text">Company Name</h3>
-        </div>
-        <div class="menu">
-            <div class="menu-item active" onclick="showSection('list')">📁 Route Reports</div>
-            <div class="menu-item" onclick="showSection('list')">📊 List Cluster Reports</div>
-        </div>
-    </div>
-
-    <div id="main">
-        <div id="top-bar">
-            <h2>Route Reports</h2>
-            <button class="add-btn" onclick="showSection('create')">+ Add New Route Report</button>
-        </div>
-
-        <div id="section-list" class="page">
-            <div class="filters-bar">
-                <input type="text" id="search" placeholder="Search report name...">
-                <select id="client-filter"><option>All Clients</option></select>
-                <button onclick="addClient()">+ New Client</button>
-            </div>
-            <table id="report-table">
-                <thead><tr><th>Title</th><th>Date</th><th>Client</th><th>Type</th><th>Actions</th></tr></thead>
-                <tbody id="list-body"></tbody>
-            </table>
-        </div>
-
-        <div id="section-create" class="page" style="display:none">
-            <div class="create-card">
-                <h3>Create New Report</h3>
-                <input type="text" id="new-title" placeholder="Report Title">
-                <input type="text" id="new-url" placeholder="Google Sheet CSV URL">
-                <div class="type-picker">
-                    <button id="btn-map" class="selected" onclick="setType('map')">Map</button>
-                    <button id="btn-cluster" onclick="setType('cluster')">Cluster Graph</button>
+    <div id="dashboard">
+        <div id="sidebar">
+            <div class="logo-section">
+                <div class="logo-circle" id="logo-container">
+                    <img id="user-logo" src="" style="display:none; width:100%;">
+                    <span id="logo-placeholder">Logo</span>
                 </div>
-                <button class="save-btn" onclick="saveToDrive()">Save & Publish</button>
+                <input type="file" id="logo-upload" hidden onchange="handleLogo(event)">
+            </div>
+            <div class="menu">
+                <div class="menu-item">Accounts</div>
+                <div class="menu-item">Users</div>
+                <div class="menu-item active" onclick="showPage('list')">Route Reports</div>
+                <div class="menu-sub" onclick="showPage('list')">List Cluster Report</div>
             </div>
         </div>
 
-        <div id="section-view" class="page" style="display:none">
-            <div class="view-header">
-                <button onclick="showSection('list')">← Back</button>
-                <h3 id="view-title">Viewing Map</h3>
-                <div class="map-filters">
-                    <select id="origin-country-filter" onchange="applyMapFilters()"><option value="All">All Origins</option></select>
+        <div id="main">
+            <div id="header">
+                <h2>Route Reports</h2>
+                <button class="add-btn" onclick="showPage('create')">+ Add New Route Report</button>
+            </div>
+
+            <div class="filter-bar">
+                <input type="text" id="main-search" placeholder="Search..." onkeyup="filterTable()">
+                <div class="client-group">
+                    <label>Client:</label>
+                    <select id="client-select">
+                        <option>All Clients</option>
+                    </select>
+                    <button onclick="addNewClient()">+ Add</button>
                 </div>
             </div>
-            <div id="map"></div>
-            <div id="cluster-container" style="display:none"></div>
+
+            <div id="page-list" class="page-content">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Report Title</th>
+                            <th>Date Created</th>
+                            <th>Client</th>
+                            <th>Type</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-list-rows">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="page-create" class="page-content" style="display:none;">
+                <div class="create-card">
+                    <div class="form-row">
+                        <label>Report Title:</label>
+                        <input type="text" id="report-name" placeholder="Enter Name">
+                    </div>
+                    <div class="form-row">
+                        <label>Google Sheet URL:</label>
+                        <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/...">
+                    </div>
+                    <div class="form-row">
+                        <label>Map or Graph Type:</label>
+                        <div class="type-selection">
+                            <div class="type-box active" id="box-map" onclick="selectType('map')">
+                                <img src="https://cdn-icons-png.flaticon.com/512/854/854878.png" width="30">
+                                <span>Map</span>
+                            </div>
+                            <div class="type-box" id="box-cluster" onclick="selectType('cluster')">
+                                <img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" width="30">
+                                <span>Cluster Graph</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label>Company Logo:</label>
+                        <button onclick="document.getElementById('logo-upload').click()">Upload Logo</button>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="save-btn" onclick="processAndSave()">Save & Generate</button>
+                        <button onclick="showPage('list')">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="page-view" class="page-content" style="display:none;">
+                <div class="view-controls">
+                    <button onclick="showPage('list')">← Back to List</button>
+                    <h3 id="viewing-title"></h3>
+                </div>
+                <div id="map-frame">
+                    <div id="map-element"></div>
+                    <div id="cluster-element" style="display:none;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
