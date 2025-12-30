@@ -1,4 +1,4 @@
-const DB_URL = "YOUR_APPS_SCRIPT_URL"; // Paste your Google Script Link here
+const DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; // Paste your Google Script Link here
 let currentType = 'map';
 let allReports = [];
 let map;
