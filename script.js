@@ -1,141 +1,127 @@
-let map = L.map('map').setView([20, 0], 2);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+const DB_URL = "YOUR_APPS_SCRIPT_URL"; // Paste your Google Script Link here
+let currentType = 'map';
+let allReports = [];
+let map;
 
-let allData = [];
-let currentView = 'flow';
-
-function toggleModal(show) { document.getElementById('modal-overlay').style.display = show ? 'block' : 'none'; }
-
-function loadDataFromUrl() {
-    let url = document.getElementById('sheet-url').value;
-    Papa.parse(url, {
-        download: true, header: true, skipEmptyLines: true,
-        complete: function(results) {
-            allData = results.data;
-            updateFilters();
-            filterData();
-            toggleModal(false);
-        }
-    });
+// 1. LOGIN CHECK
+if(!localStorage.getItem('auth')) {
+    let pass = prompt("Enter Password:");
+    if(pass === "1234") localStorage.setItem('auth', 'true');
+    else window.location.reload();
 }
 
-function updateFilters() {
-    const colors = [...new Set(allData.map(d => d.COLOR))].filter(Boolean);
-    const origins = [...new Set(allData.map(d => d['Origin Country Name']))].filter(Boolean);
-    const dests = [...new Set(allData.map(d => d['Destination Country Name']))].filter(Boolean);
-    
-    fillSelect('color-filter', colors);
-    fillSelect('origin-filter', origins);
-    fillSelect('dest-filter', dests);
+// 2. LOAD DATA FROM GOOGLE DRIVE
+async function loadReports() {
+    const res = await fetch(DB_URL);
+    const data = await res.json();
+    allReports = data.slice(1); // Remove headers
+    renderList();
 }
 
-function fillSelect(id, items) {
-    let select = document.getElementById(id);
-    select.innerHTML = `<option value="All">All</option>`;
-    items.forEach(item => select.innerHTML += `<option value="${item}">${item}</option>`);
+function renderList() {
+    const body = document.getElementById('list-body');
+    body.innerHTML = allReports.map((r, i) => `
+        <tr>
+            <td>${r[1]}</td><td>${r[5]}</td><td>${r[4]}</td><td>${r[3]}</td>
+            <td>
+                <button onclick="openReport(${i})">Preview</button>
+                <button onclick="downloadReport(${i})">Download</button>
+            </td>
+        </tr>
+    `).join('');
 }
 
-function filterData() {
-    let search = document.getElementById('search-box').value.toLowerCase();
-    let colorF = document.getElementById('color-filter').value;
-    let originF = document.getElementById('origin-filter').value;
+// 3. MOVING FLOW LINES
+function renderMap(data) {
+    if(map) map.remove();
+    map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    let filtered = allData.filter(d => {
-        let matchesSearch = d.Exporter.toLowerCase().includes(search) || d.Importer.toLowerCase().includes(search);
-        let matchesColor = colorF === 'All' || d.COLOR === colorF;
-        let matchesOrigin = originF === 'All' || d['Origin Country Name'] === originF;
-        return matchesSearch && matchesColor && matchesOrigin;
-    });
-
-    if (currentView === 'flow') renderFlowMap(filtered);
-    else renderClusterGraph(filtered);
-}
-
-function renderFlowMap(data) {
-    map.eachLayer(l => { if (l instanceof L.Polyline || l instanceof L.CircleMarker) map.removeLayer(l); });
-
-    // Grouping by Exporter-Importer pairs for thick lines
-    let groups = d3.group(data, d => d.Exporter + d.Importer);
-
-    groups.forEach((shipments, key) => {
-        let s = shipments[0];
-        if (!s['Origin latitude'] || !s['Destination latitude']) return;
-
-        let lineWeight = shipments.length > 1 ? 8 : 3;
-        let lineColor = s.COLOR || 'blue';
-
-        let line = L.polyline([
-            [s['Origin latitude'], s['Origin longitude']],
-            [s['Destination latitude'], s['Destination longitude']]
-        ], { color: lineColor, weight: lineWeight, opacity: 0.6 }).addTo(map);
-
-        // Marker for origin country
-        L.circleMarker([s['Origin latitude'], s['Origin longitude']], {radius: 5, color: 'green'}).addTo(map)
-            .bindPopup(s['Origin Country Name']);
-
-        // Popup logic with Dropdown for multiple shipments
-        let shipmentDetails = shipments.map((ship, i) => `
-            <div style="border-top:1px solid #eee; padding-top:5px; margin-top:5px;">
-                <b>Shipment ${i+1}:</b><br>
-                📦 Product: ${ship.PRODUCT}<br>
-                💰 Value: ${ship['Value(USD)']} | Qty: ${ship.Quantity}<br>
-                📅 Date: ${ship.Date}
-            </div>
-        `).join('');
-
-        line.bindPopup(`
-            <div style="max-height: 200px; overflow-y: auto;">
-                <h4 style="margin:0">Shipment Details</h4>
-                🚢 Mode: ${s['Mode of Transport']}<br>
-                🏭 Exp: ${s.Exporter}<br>
-                🤝 Imp: ${s.Importer}<br>
-                📍 Port: ${s['Origin Port']} ➔ ${s['Destination Port']}
-                ${shipmentDetails}
-            </div>
-        `);
-    });
-}
-
-function renderClusterGraph(data) {
-    // This uses D3 to create a forced layout of Exporters and Importers
-    document.getElementById('cluster-graph').innerHTML = "";
-    const width = document.getElementById('cluster-graph').clientWidth;
-    const height = document.getElementById('cluster-graph').clientHeight;
-
-    const svg = d3.select("#cluster-graph").append("svg").attr("width", width).attr("height", height);
-
-    // Grouping nodes by Country
-    let nodes = [];
     data.forEach(d => {
-        if (!nodes.find(n => n.id === d.Exporter)) nodes.push({ id: d.Exporter, type: 'Exporter', country: d['Origin Country Name'] });
-        if (!nodes.find(n => n.id === d.Importer)) nodes.push({ id: d.Importer, type: 'Importer', country: d['Destination Country Name'] });
+        const start = [d['Origin latitude'], d['Origin longitude']];
+        const end = [d['Destination latitude'], d['Destination longitude']];
+        
+        // Marker for both
+        L.marker(start).addTo(map).bindPopup("Exporter: " + d.Exporter);
+        L.marker(end).addTo(map).bindPopup("Importer: " + d.Importer);
+
+        // Moving "Ant Path" line (Animated & Curved)
+        L.polyline.antPath([start, end], {
+            "paused": false, "reverse": false, "delay": 3000, "dashArray": [10, 20],
+            "weight": 3, "color": d.COLOR || "blue", "pulseColor": "#FFFFFF"
+        }).addTo(map);
+    });
+}
+
+// 4. CLUSTER GRAPH WITH LINES
+function renderCluster(data) {
+    document.getElementById('map').style.display = 'none';
+    const container = document.getElementById('cluster-container');
+    container.style.display = 'block';
+    container.innerHTML = "";
+
+    const width = 800, height = 600;
+    const svg = d3.select("#cluster-container").append("svg").attr("width", width).attr("height", height);
+
+    let nodes = [], links = [];
+    data.forEach(d => {
+        if(!nodes.find(n => n.id === d.Exporter)) nodes.push({id: d.Exporter, type: 'Exp', country: d['Origin Country Name']});
+        if(!nodes.find(n => n.id === d.Importer)) nodes.push({id: d.Importer, type: 'Imp', country: d['Destination Country Name']});
+        links.push({source: d.Exporter, target: d.Importer});
     });
 
     const simulation = d3.forceSimulation(nodes)
-        .force("charge", d3.forceManyBody().strength(-100))
-        .force("center", d3.forceCenter(width / 2, height / 2))
-        .force("collision", d3.forceCollide().radius(30));
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-200))
+        .force("center", d3.forceCenter(width/2, height/2));
 
-    const nodeElements = svg.append("g")
-        .selectAll("circle")
-        .data(nodes)
-        .enter().append("circle")
-        .attr("r", 10)
-        .attr("fill", d => d.type === 'Exporter' ? '#e74c3c' : '#3498db') // Red for Exp, Blue for Imp
+    // Draw connecting lines
+    const link = svg.append("g").selectAll("line").data(links).enter().append("line")
+        .attr("stroke", "#999").attr("stroke-width", 2);
+
+    // Draw circles
+    const node = svg.append("g").selectAll("circle").data(nodes).enter().append("circle")
+        .attr("r", 12)
+        .attr("fill", d => d.type === 'Exp' ? '#ff4444' : '#4444ff') // Red for Exp, Blue for Imp
         .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
 
-    simulation.on("tick", () => {
-        nodeElements.attr("cx", d => d.x).attr("cy", d => d.y);
-    });
+    node.append("title").text(d => `${d.id} (${d.country})`);
 
-    function dragstarted(event) { if (!event.active) simulation.alphaTarget(0.3).restart(); event.subject.fx = event.subject.x; event.subject.fy = event.subject.y; }
-    function dragged(event) { event.subject.fx = event.x; event.subject.fy = event.y; }
-    function dragended(event) { if (!event.active) simulation.alphaTarget(0); event.subject.fx = null; event.subject.fy = null; }
+    simulation.on("tick", () => {
+        link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+        node.attr("cx", d => d.x).attr("cy", d => d.y);
+    });
 }
 
-function switchTab(tab) {
-    currentView = tab;
-    document.getElementById('map').style.display = tab === 'flow' ? 'block' : 'none';
-    document.getElementById('cluster-graph').style.display = tab === 'cluster' ? 'block' : 'none';
-    filterData();
+// 5. SAVE TO DRIVE
+async function saveToDrive() {
+    const reportData = {
+        target: "Reports",
+        data: [Date.now(), document.getElementById('new-title').value, document.getElementById('new-url').value, currentType, "General", new Date().toLocaleDateString()]
+    };
+    await fetch(DB_URL, { method: 'POST', body: JSON.stringify(reportData) });
+    alert("Saved to Google Drive!");
+    loadReports();
+    showSection('list');
+}
+
+// Logo Persistence
+function uploadLogo(e) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        localStorage.setItem('userLogo', reader.result);
+        document.getElementById('logo-img').src = reader.result;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+}
+
+window.onload = () => {
+    if(localStorage.getItem('userLogo')) document.getElementById('logo-img').src = localStorage.getItem('userLogo');
+    loadReports();
+};
+
+function showSection(s) {
+    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+    document.getElementById('section-'+s).style.display = 'block';
 }
