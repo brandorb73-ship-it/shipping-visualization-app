@@ -1,280 +1,51 @@
-/* ==========================================
-   GLOBAL THEME & RESET
-   ========================================== */
 :root {
     --navy: #0f172a;
     --blue: #38bdf8;
-    --emerald: #10b981;
     --slate: #64748b;
-    --border: #e2e8f0;
-    --bg-light: #f8fafc;
     --white: #ffffff;
+    --bg: #f8fafc;
 }
 
-body {
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    background: var(--bg-light);
-    color: var(--navy);
-    overflow: hidden;
-}
+body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); }
 
-/* ==========================================
-   LOGIN SCREEN
-   ========================================== */
-#login-overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--navy);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+/* LOGIN */
+#login-overlay { position: fixed; inset: 0; background: var(--navy); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.login-card { background: white; padding: 40px; border-radius: 20px; width: 350px; text-align: center; }
+#logo-drop-zone { margin: 0 auto 20px; cursor: pointer; width: 150px; height: 100px; border: 2px dashed var(--blue); background: #f0f9ff; display: flex; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden; }
+#login-display-logo { max-width: 100%; max-height: 100%; }
+.login-card input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+.login-card button { width: 100%; padding: 12px; background: var(--blue); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+#login-error { color: #ef4444; font-size: 12px; margin-top: 10px; font-weight: 600; }
 
-.login-card {
-    background: var(--white);
-    padding: 45px;
-    border-radius: 24px;
-    width: 380px;
-    text-align: center;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
+/* LAYOUT */
+#app-container { display: flex; height: 100vh; }
+#sidebar { width: 260px; background: var(--navy); color: white; flex-shrink: 0; }
+.sidebar-logo-area { padding: 30px; border-bottom: 1px solid #1e293b; display: flex; justify-content: center; }
+.logo-box-white { background: white; padding: 10px; border-radius: 8px; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+.logo-box-white img { max-width: 100%; max-height: 100%; }
+.sidebar-header { padding: 20px 25px 10px; font-size: 11px; color: var(--slate); font-weight: 700; }
+.nav-link { display: flex; align-items: center; gap: 10px; padding: 12px 25px; color: #94a3b8; text-decoration: none; transition: 0.3s; }
+.nav-link.active { color: var(--blue); background: #1e293b; border-left: 4px solid var(--blue); }
 
-.login-card input {
-    width: 100%;
-    padding: 14px;
-    margin-top: 15px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    box-sizing: border-box;
-    font-size: 16px;
-}
+/* CONTENT */
+#main-content { flex-grow: 1; overflow-y: auto; }
+#brand-header { background: white; padding: 20px 40px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.main-title { font-family: 'Montserrat'; margin: 0; font-size: 24px; }
+.sub-title { font-size: 10px; color: var(--slate); text-transform: uppercase; margin: 0; }
 
-.login-card button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 25px;
-    background: var(--blue);
-    color: var(--navy);
-    border: none;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 16px;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
+.action-strip { padding: 20px 40px; display: flex; justify-content: space-between; }
+#main-search { padding: 10px; width: 300px; border: 1px solid #ddd; border-radius: 6px; }
+.btn-publish { background: var(--navy); color: white; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
 
-.login-card button:hover {
-    transform: translateY(-2px);
-    background: #7dd3fc;
-}
+.table-card { margin: 0 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+.corporate-table { width: 100%; border-collapse: collapse; }
+.corporate-table th { background: #f8fafc; padding: 15px; text-align: left; font-size: 12px; color: var(--slate); }
+.corporate-table td { padding: 15px; border-top: 1px solid #f1f5f9; font-size: 14px; }
 
-/* ==========================================
-   DASHBOARD LAYOUT
-   ========================================== */
-#app-container {
-    display: flex;
-    height: 100vh;
-}
+/* MAP VIEW */
+.viz-title-bar { background: var(--navy); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
+.back-btn { background: #1e293b; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; }
 
-/* SIDEBAR */
-#sidebar {
-    width: 260px;
-    background: var(--navy);
-    color: var(--white);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-}
-
-.sidebar-logo-area {
-    padding: 40px 30px;
-    display: flex;
-    justify-content: center;
-    border-bottom: 1px solid #1e293b;
-}
-
-.logo-box-white {
-    width: 120px;
-    height: 70px;
-    background: var(--white);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px;
-    box-sizing: border-box;
-}
-
-.logo-box-white img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-
-.sidebar-header {
-    padding: 25px 25px 10px;
-    font-size: 11px;
-    letter-spacing: 1.5px;
-    color: var(--slate);
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.nav-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px 25px;
-    color: #94a3b8;
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: 0.2s;
-}
-
-.nav-link i { width: 20px; }
-.nav-link:hover { color: var(--white); background: #1e293b; }
-.nav-link.active { 
-    background: #1e293b; 
-    color: var(--blue); 
-    border-left: 4px solid var(--blue); 
-}
-
-/* MAIN CONTENT */
-#main-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-}
-
-#brand-header {
-    background: var(--white);
-    padding: 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
-
-.main-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 28px;
-    margin: 0;
-    letter-spacing: -0.5px;
-}
-
-.sub-title {
-    font-size: 11px;
-    color: var(--slate);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin: 0;
-    font-weight: 600;
-}
-
-.top-right-controls { position: absolute; right: 40px; }
-
-/* TABLE STYLING */
-.action-strip { padding: 30px 40px; display: flex; justify-content: space-between; }
-
-.corporate-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.corporate-table th {
-    background: #f1f5f9;
-    padding: 15px 25px;
-    text-align: left;
-    font-size: 12px;
-    color: var(--slate);
-}
-
-.corporate-table td {
-    padding: 18px 25px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 14px;
-}
-
-/* ==========================================
-   MAP & POPUP STYLING
-   ========================================== */
-.viz-title-bar {
-    background: var(--navy);
-    color: var(--white);
-    padding: 12px 25px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.shipment-popup { min-width: 280px; }
-.popup-head {
-    background: var(--navy);
-    color: var(--white);
-    padding: 10px 15px;
-    font-weight: 700;
-    font-size: 13px;
-    border-radius: 8px 8px 0 0;
-}
-
-.popup-body {
-    padding: 15px;
-    border: 1px solid var(--border);
-    border-top: none;
-    font-size: 12px;
-    background: var(--white);
-}
-
-.shipment-item {
-    background: #f8fafc;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 10px;
-    margin-top: 8px;
-}
-
-/* ==========================================
-   PRINT & PDF EXPORT (SPECIALIZED)
-   ========================================== */
 @media print {
-    #sidebar, 
-    #brand-header, 
-    .action-strip, 
-    .back-btn, 
-    .viz-controls,
-    .btn-delete,
-    .btn-publish { 
-        display: none !important; 
-    }
-    
-    #main-content { 
-        margin: 0 !important; 
-        padding: 0 !important; 
-        width: 100% !important; 
-    }
-    
-    #page-view { 
-        display: block !important; 
-        width: 100% !important;
-    }
-
-    #viz-wrapper {
-        height: 100vh !important;
-        width: 100% !important;
-        border: none !important;
-    }
-
-    #viz-logo {
-        display: block !important;
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        z-index: 10001;
-        height: 50px !important;
-    }
+    #sidebar, #brand-header, .action-strip, .back-btn { display: none !important; }
 }
