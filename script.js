@@ -1,90 +1,71 @@
-/* ==========================================
-   CONFIG & GLOBAL VARIABLES
-   ========================================== */
-const DB_URL = "https://script.google.com/macros/s/AKfycbyRBE6_yUjzOPfLjis4OyK6XVtuWIBOmV9khY1cJ6_iQTCldqQbec7jtNmpiAL8-MI9/exec"; 
-const ACCESS_KEY = "Cyber$supe73r"; // CHANGE THIS to your desired password
+// 1. SET YOUR PASSWORD HERE
+const ACCESS_KEY = "Cyber$supe73r"; 
+const DB_URL = "https://script.google.com/macros/s/AKfycbyRBE6_yUjzOPfLjis4OyK6XVtuWIBOmV9khY1cJ6_iQTCldqQbec7jtNmpiAL8-MI9/exec";
 
-let reports = [];
-let currentRawData = [];
-let mapInstance = null;
-let selectedType = 'map';
-
-/* ==========================================
-   FAIL-SAFE AUTH & LOGO
-   ========================================== */
-
-// 1. LOGIN FUNCTION
-function attemptLogin() {
-    const input = document.getElementById('pass-input').value;
-    const errorMsg = document.getElementById('login-error');
-    
-    console.log("Attempting login with:", input);
-
-    if (input === ACCESS_KEY) {
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('app-container').style.display = 'flex';
-        sessionStorage.setItem('auth', 'true');
-        errorMsg.style.display = 'none';
-        fetchReports(); // Load data after login
-    } else {
-        errorMsg.style.display = 'block';
-        document.getElementById('pass-input').value = "";
-    }
-}
-
-// 2. LOGO UPLOAD FUNCTION
+// 2. LOGO UPLOAD LOGIC
 function handleLogoUpload(input) {
+    console.log("File selection triggered");
     if (input.files && input.files[0]) {
-        console.log("File detected for upload...");
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const base64Image = e.target.result;
-            localStorage.setItem('bo-logo', base64Image);
-            updateGlobalLogos(base64Image);
-            console.log("Logo saved to local storage.");
+        reader.onload = function(e) {
+            const imageData = e.target.result;
+            // Save to browser memory
+            localStorage.setItem('brandorb_logo', imageData);
+            // Update UI
+            updateAllLogos(imageData);
         };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
-function updateGlobalLogos(src) {
-    // Update all images with the class 'global-logo-src'
-    const targets = document.querySelectorAll('.global-logo-src');
-    targets.forEach(img => {
+function updateAllLogos(src) {
+    // Update the login preview
+    const loginPreview = document.getElementById('login-display-logo');
+    const placeholder = document.getElementById('login-logo-placeholder');
+    if (loginPreview) {
+        loginPreview.src = src;
+        loginPreview.style.display = 'block';
+    }
+    if (placeholder) placeholder.style.display = 'none';
+
+    // Update all other logo spots in the app
+    document.querySelectorAll('.global-logo-src').forEach(img => {
         img.src = src;
         img.style.display = 'block';
     });
-    
-    // Specifically update the login screen preview
-    const loginImg = document.getElementById('login-display-logo');
-    const placeholder = document.getElementById('login-logo-placeholder');
-    
-    if (loginImg) {
-        loginImg.src = src;
-        loginImg.style.display = 'block';
-    }
-    if (placeholder) {
-        placeholder.style.display = 'none';
+}
+
+// 3. LOGIN LOGIC
+function attemptLogin() {
+    const enteredPass = document.getElementById('pass-input').value;
+    const errorMsg = document.getElementById('login-error');
+
+    if (enteredPass === ACCESS_KEY) {
+        // SUCCESS
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        sessionStorage.setItem('isLoggedIn', 'true');
+        fetchReports(); // Trigger data load
+    } else {
+        // FAIL
+        errorMsg.style.display = 'block';
+        document.getElementById('pass-input').value = "";
     }
 }
 
-// 3. PERSISTENCE ON PAGE LOAD
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("App Initialized...");
-    
-    // Restore Logo
-    const savedLogo = localStorage.getItem('bo-logo');
-    if (savedLogo) {
-        updateGlobalLogos(savedLogo);
-    }
-    
-    // Restore Session
-    if (sessionStorage.getItem('auth') === 'true') {
+// 4. ON PAGE LOAD
+window.onload = function() {
+    // Check for saved logo
+    const savedLogo = localStorage.getItem('brandorb_logo');
+    if (savedLogo) updateAllLogos(savedLogo);
+
+    // Check for active session
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
         fetchReports();
     }
-});
+};
 /* ==========================================
    DATA OPERATIONS (Sheets & Table)
    ========================================== */
