@@ -1,147 +1,41 @@
-/* surgical fix for layout and login formatting */
-#login-overlay { 
-    position: fixed; inset: 0; 
-    background: #0f172a; /* Dark Navy Background */
-    z-index: 9999; display: flex; align-items: center; justify-content: center; 
-}
-
-.login-card { 
-    background: white; padding: 40px; border-radius: 12px; 
-    width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
-}
-
-#app-container { 
-    display: flex; width: 100vw; height: 100vh; 
-}
-
-#sidebar { 
-    width: 260px; background: #0f172a; color: white; flex-shrink: 0; 
-}
-
-#main-content { 
-    flex-grow: 1; overflow-y: auto; background: #f8fafc; 
-}
-
 :root {
     --navy: #0f172a;
-    --navy-light: #1e293b;
     --brand-blue: #38bdf8;
     --bg: #f8fafc;
 }
 
-/* 1. SCROLLBAR & LAYOUT FIX */
-#main-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    background: var(--bg);
-    height: 100vh;
-    overflow-y: auto; /* Enables scrolling for the report list */
+body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: 'Inter', sans-serif; }
+
+/* Layout Fix: Prevents squashing to left */
+#app-container { display: flex; width: 100vw; height: 100vh; }
+#sidebar { width: 260px; background: var(--navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; }
+#main-content { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; }
+
+/* Logo Fix: Ensures logo fits the box without error */
+.sidebar-logo-area { padding: 30px 20px; display: flex; justify-content: center; }
+.logo-box-white { 
+    width: 120px; height: 120px; background: white; border-radius: 12px; 
+    display: flex; align-items: center; justify-content: center; overflow: hidden; 
 }
+.global-logo-src { width: 90%; height: 90%; object-fit: contain; }
 
-/* 2. BLANK SCREEN FIX - MANDATORY HEIGHT */
-#map-element {
-    width: 100% !important;
-    height: calc(100vh - 120px); /* Explicit height is required for Leaflet/D3 */
-    min-height: 600px;
-    background: #ffffff;
-    position: relative;
-}
+/* Login Interface */
+#login-overlay { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.login-card { background: white; padding: 40px; border-radius: 16px; width: 350px; text-align: center; }
+#logo-drop-zone { border: 2px dashed #cbd5e1; padding: 20px; border-radius: 8px; margin-bottom: 20px; cursor: pointer; }
+#login-display-logo { width: 100px; height: 100px; object-fit: contain; margin: 0 auto; }
 
-/* 3. CORPORATE ADD CLIENT BUTTON */
-.btn-add-client {
-    background: #ffffff;
-    color: var(--navy);
-    border: 1px solid #e2e8f0;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 14px;
-}
+/* Buttons & Navigation */
+.btn-login { width: 100%; padding: 12px; background: var(--navy); color: var(--brand-blue); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.btn-add-client-plus { background: var(--navy); color: var(--brand-blue); border: 1px solid var(--brand-blue); border-radius: 6px; width: 34px; height: 34px; cursor: pointer; }
+.nav-link { padding: 15px 25px; color: #94a3b8; text-decoration: none; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
+.nav-link.active { background: #1e293b; color: var(--brand-blue); border-left: 4px solid var(--brand-blue); }
 
-.btn-add-client:hover {
-    background: var(--brand-blue);
-    color: white;
-    border-color: var(--brand-blue);
-}
+/* Map & Graph Container */
+#map-element { width: 100%; height: calc(100vh - 150px); min-height: 500px; background: white; }
 
-/* 4. TABLE STYLING */
-.table-card {
-    margin: 20px 40px;
-    padding-bottom: 50px; /* Extra space at the bottom of the scroll */
-}
-
-.corporate-table td {
-    border-bottom: 1px solid #f1f5f9;
-    padding: 16px;
-}
-/* Fixes the broken, unstyled login look */
-#login-overlay {
-    position: fixed;
-    inset: 0;
-    background: #0f172a; /* Dark navy background */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    font-family: 'Inter', sans-serif;
-}
-
-.login-card {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    width: 350px;
-    text-align: center;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-}
-
-.login-card h2 { margin-bottom: 20px; color: #0f172a; }
-
-.login-card input {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    box-sizing: border-box; /* Prevents input from overflowing */
-}
-
-.btn-login {
-    width: 100%;
-    padding: 12px;
-    background: #0f172a;
-    color: #38bdf8;
-    border: none;
-    border-radius: 6px;
-    font-weight: bold;
-    cursor: pointer;
-}
-/* Layout & Scrolling */
-body { margin: 0; font-family: 'Inter', sans-serif; overflow: hidden; }
-#app-container { display: flex; height: 100vh; width: 100vw; }
-#sidebar { width: 260px; background: #0f172a; color: white; flex-shrink: 0; }
-#main-content { flex-grow: 1; display: flex; flex-direction: column; background: #f8fafc; overflow-y: auto; }
-
-/* Professional Login Restored */
-#login-overlay { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.login-card { background: white; padding: 40px; border-radius: 16px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-.btn-login { width: 100%; padding: 12px; background: #0f172a; color: #38bdf8; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-/* Corporate Add Client Button */
-.btn-add-client-plus {
-    background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8;
-    width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-
-/* Map Visibility Fix */
-#map-element { width: 100%; height: calc(100vh - 120px); min-height: 500px; background: #fff; }
-
-/* Professional Sidebar */
-.nav-link { display: flex; align-items: center; padding: 12px 20px; color: #94a3b8; text-decoration: none; gap: 10px; }
-.nav-link.active { background: #1e293b; color: #38bdf8; border-left: 4px solid #38bdf8; }
+/* Table Styling */
+.table-card { margin: 20px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+.corporate-table { width: 100%; border-collapse: collapse; }
+.corporate-table th { background: #f1f5f9; padding: 15px; text-align: left; font-size: 13px; color: #64748b; }
+.corporate-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; }
