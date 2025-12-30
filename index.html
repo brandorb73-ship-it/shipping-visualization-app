@@ -5,120 +5,98 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrandOrb | Supply Chain Intelligence</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app-container">
+    <div id="login-overlay">
+        <div class="login-card">
+            <div class="logo-box-white" style="margin: 0 auto;">BO</div>
+            <h2>BrandOrb Intelligence</h2>
+            <p>Secure Access Portal</p>
+            <input type="password" id="pass-input" placeholder="Enter Access Key">
+            <button onclick="attemptLogin()">Access Dashboard</button>
+            <p id="login-error" style="color: #ef4444; display: none; margin-top: 10px;">Invalid access key.</p>
+        </div>
+    </div>
+
+    <div id="app-container" style="display:none;">
         <aside id="sidebar">
-            <div class="brand-area" onclick="document.getElementById('logo-upload').click()">
-                <div class="logo-box">
-                    <img id="user-logo" src="" style="display:none;">
-                    <span id="logo-placeholder">BO</span>
-                </div>
-                <div class="brand-text">
-                    <span class="company-name">BrandOrb</span>
-                    <span class="service-tag">Supply Chain Intelligence</span>
-                </div>
-                <input type="file" id="logo-upload" hidden accept="image/*" onchange="handleLogoUpload(this)">
-            </div>
-            
+            <div class="sidebar-header">MENU</div>
             <nav class="nav-menu">
-                <div class="nav-section">ADMINISTRATION</div>
-                <a href="#" class="nav-link">Accounts</a>
-                <a href="#" class="nav-link">Users</a>
-                
-                <div class="nav-section">ANALYTICS</div>
-                <a href="#" class="nav-link active" onclick="showPage('list')">Route Reports</a>
-                <div id="sidebar-route-list" class="sub-nav"></div>
-                
-                <a href="#" class="nav-link" onclick="showPage('list')">Cluster Graphs</a>
-                <div id="sidebar-cluster-list" class="sub-nav"></div>
+                <a href="#" class="nav-link" onclick="showPage('list')"><i class="fas fa-users-cog"></i> Accounts</a>
+                <a href="#" class="nav-link" onclick="showPage('list')"><i class="fas fa-user-friends"></i> Users</a>
+                <div class="nav-divider"></div>
+                <a href="#" class="nav-link active" onclick="showPage('list')"><i class="fas fa-route"></i> Route Reports</a>
+                <a href="#" class="nav-link" onclick="showPage('list')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
             </nav>
         </aside>
 
-        <main id="main-wrapper">
-            <header id="top-nav">
-                <div class="page-title">Dashboard Overview</div>
-                <div class="header-controls">
+        <main id="main-content">
+            <header id="brand-header">
+                <div class="logo-box-white" onclick="document.getElementById('logo-upload').click()">
+                    <img id="user-logo" src="" style="display:none;">
+                    <span id="logo-placeholder">LOGO</span>
+                    <input type="file" id="logo-upload" hidden onchange="handleLogoUpload(this)">
+                </div>
+                <div class="brand-title-group">
+                    <h1 class="main-title">BrandOrb</h1>
+                    <p class="sub-title">SUPPLY CHAIN INTELLIGENCE</p>
+                    <div class="dashboard-breadcrumb">Intelligence Dashboard</div>
+                </div>
+                <div class="top-right-controls">
                     <div class="client-pill">
-                        <select id="client-select">
-                            <option value="All">All Clients</option>
-                        </select>
-                        <button class="icon-add" onclick="addNewClient()">+</button>
+                        <select id="client-select"><option value="All">All Clients</option></select>
+                        <button class="add-client-btn" onclick="addNewClient()">+</button>
                     </div>
                 </div>
             </header>
 
-            <section class="action-bar">
-                <div class="search-container">
-                    <input type="text" id="main-search" placeholder="Filter reports by title or client..." onkeyup="filterTable()">
-                </div>
-                <button class="btn-primary" onclick="showPage('create')">+ Add New Report</button>
-            </section>
+            <div class="action-strip">
+                <input type="text" id="main-search" placeholder="Search reports..." oninput="filterTable()">
+                <button class="btn-publish" onclick="showPage('create')">+ Add New Report</button>
+            </div>
 
             <div id="page-list" class="content-page">
-                <div class="card-table-wrapper">
-                    <table class="main-table">
+                <div class="table-card">
+                    <table class="corporate-table">
                         <thead>
-                            <tr>
-                                <th>Report Title</th>
-                                <th>Client</th>
-                                <th>Date Created</th>
-                                <th>Type</th>
-                                <th style="text-align:right">Actions</th>
-                            </tr>
+                            <tr><th>Title</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr>
                         </thead>
-                        <tbody id="report-list-rows">
-                            </tbody>
+                        <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
             </div>
 
             <div id="page-create" class="content-page" style="display:none;">
                 <div class="form-container">
-                    <div class="form-header">
-                        <h2>Configure Intelligence Report</h2>
-                        <p>Link your Google Sheet CSV to generate interactive visualizations.</p>
-                    </div>
+                    <h2 class="form-heading">Create Intelligence Report</h2>
                     <div class="form-grid">
-                        <div class="field">
-                            <label>Report Title</label>
-                            <input type="text" id="report-name" placeholder="Enter a descriptive title">
-                        </div>
-                        <div class="field">
-                            <label>Google Sheet URL (CSV Format)</label>
-                            <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv">
-                        </div>
+                        <div class="form-group"><label>Report Title</label><input type="text" id="report-name"></div>
+                        <div class="form-group"><label>CSV URL</label><input type="text" id="sheet-url"></div>
                     </div>
-                    
-                    <div class="visual-picker">
-                        <label>Select Visualization Type</label>
-                        <div class="picker-grid">
-                            <div class="picker-card active" id="pick-map" onclick="selectType('map')">
-                                <h3>Route Map</h3>
-                                <p>Dynamic flow lines between Origin and Destination ports.</p>
-                            </div>
-                            <div class="picker-card" id="pick-cluster" onclick="selectType('cluster')">
-                                <h3>Cluster Graph</h3>
-                                <p>Relational network grouping Exporters and Importers by country.</p>
-                            </div>
-                        </div>
+                    <div class="type-picker-row">
+                        <div class="type-card active" id="pick-map" onclick="selectType('map')">Route Map</div>
+                        <div class="type-card" id="pick-cluster" onclick="selectType('cluster')">Cluster Graph</div>
                     </div>
-
-                    <div class="form-footer">
-                        <button class="btn-save" onclick="processAndSave()">Publish Report</button>
+                    <div class="form-buttons">
+                        <button class="btn-save" onclick="processAndSave()">Publish & Save</button>
                         <button class="btn-cancel" onclick="showPage('list')">Cancel</button>
                     </div>
                 </div>
             </div>
 
             <div id="page-view" class="content-page" style="display:none;">
-                <div class="viz-header">
-                    <button class="btn-back" onclick="showPage('list')">← Back</button>
-                    <h2 id="viewing-title">Report Title</h2>
+                <div class="viz-title-bar">
+                    <button class="back-btn" onclick="showPage('list')">← Back</button>
+                    <h2 id="viewing-title"></h2>
+                    <div class="viz-controls">
+                        <select id="color-filter" onchange="applyFilters()"><option value="All">All Colors</option></select>
+                        <select id="country-filter" onchange="applyFilters()"><option value="All">All Countries</option></select>
+                    </div>
                 </div>
-                <div id="viz-frame">
+                <div id="viz-wrapper">
                     <div id="map-element"></div>
                     <div id="cluster-element" style="display:none;"></div>
                 </div>
@@ -128,6 +106,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.1.2/dist/leaflet-ant-path.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-polyline-decorator@1.6.0/dist/leaflet.polyline.decorator.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="script.js"></script>
