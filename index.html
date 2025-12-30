@@ -4,75 +4,173 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrandOrb | Intelligence Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: #0f172a; }
-        #app-container { display: flex; width: 100vw; height: 100vh; background: #f8fafc; visibility: hidden; }
-        #sidebar { width: 260px; background: #0f172a; flex-shrink: 0; color: white; display: flex; flex-direction: column; }
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; width: 100%; }
-        #login-overlay { position: fixed; inset: 0; background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 9999; }
-        .login-card { background: white; padding: 40px; border-radius: 12px; width: 360px; text-align: center; }
-        #map-element { width: 100%; height: 600px; background: #eee; margin-top: 20px; }
+        :root {
+            --dark-navy: #0f172a;
+            --sidebar-bg: #1e293b;
+            --text-grey: #64748b;
+            --border-color: #e2e8f0;
+            --premium-blue: #38bdf8;
+            --surface: #f8fafc;
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Inter', sans-serif; background: var(--dark-navy); overflow: hidden; }
+
+        /* Structural Layout */
+        #app-container { display: flex; width: 100vw; height: 100vh; background: var(--surface); }
+        
+        /* Premium Sidebar */
+        #sidebar { width: 260px; background: var(--dark-navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo-container { padding: 30px 20px; text-align: center; }
+        .logo-box { background: white; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        #sidebar-logo { max-width: 140px; height: auto; display: block; }
+        
+        .nav-menu { padding: 20px 0; flex-grow: 1; }
+        .nav-item { 
+            padding: 14px 24px; display: flex; align-items: center; gap: 12px; 
+            color: #94a3b8; text-decoration: none; font-weight: 700; transition: 0.3s;
+            cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .nav-item:hover, .nav-item.active { color: var(--premium-blue); background: rgba(56, 189, 248, 0.1); }
+        .nav-item i { font-size: 18px; width: 24px; }
+
+        /* Main Content Area */
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        /* Professional Header */
+        #brand-header { 
+            background: white; padding: 20px 40px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header-left h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--dark-navy); }
+        .header-left p { margin: 0; font-size: 12px; color: var(--text-grey); letter-spacing: 1px; font-weight: 600; }
+
+        /* Search & Action Bar */
+        .action-bar { display: flex; align-items: center; gap: 15px; }
+        .search-input { 
+            padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; 
+            width: 250px; font-size: 14px; background: #fff;
+        }
+        .client-filter { 
+            padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; 
+            font-size: 14px; min-width: 140px;
+        }
+
+        /* Premium Buttons */
+        .btn-premium { 
+            padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;
+            cursor: pointer; transition: 0.2s; border: none; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-dark { background: var(--dark-navy); color: var(--premium-blue); border: 1px solid var(--premium-blue); }
+        .btn-dark:hover { background: #1e293b; transform: translateY(-1px); }
+        .btn-icon-only { width: 40px; height: 40px; justify-content: center; padding: 0; }
+
+        /* Content Card */
+        .dashboard-card { margin: 30px 40px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid var(--border-color); overflow: hidden; }
+        .corporate-table { width: 100%; border-collapse: collapse; }
+        .corporate-table th { background: #f8fafc; padding: 18px 24px; text-align: left; font-size: 12px; text-transform: uppercase; color: var(--text-grey); font-weight: 700; border-bottom: 1px solid var(--border-color); }
+        .corporate-table td { padding: 18px 24px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--dark-navy); }
+        .corporate-table tr:last-child td { border-bottom: none; }
+        .corporate-table tr:hover { background: #fcfdfe; }
+
+        /* Modal Styling */
+        .modal-overlay { 
+            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; z-index: 1000; 
+        }
+        .modal-content { background: white; width: 450px; border-radius: 16px; padding: 35px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+        .modal-content h3 { margin-top: 0; color: var(--dark-navy); font-weight: 700; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-grey); margin-bottom: 8px; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; }
     </style>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-card">
-            <div id="logo-drop-zone" onclick="document.getElementById('logo-upload').click()" style="border: 2px dashed #ccc; padding: 20px; cursor: pointer; margin-bottom: 20px;">
-                <img id="login-preview" src="" style="display:none; max-width:100px; margin: 0 auto;">
-                <p id="upload-text">+ Upload Logo</p>
-            </div>
-            <input type="file" id="logo-upload" hidden accept="image/*" onchange="window.ui.handleLogo(this)">
-            <h2>BrandOrb</h2>
-            <input type="password" id="pass-input" placeholder="Access Key" style="width:100%; padding:10px; margin-bottom:10px;">
-            <button onclick="window.ui.login()" style="width:100%; padding:10px; background:#0f172a; color:#38bdf8; border:none; border-radius:4px; cursor:pointer;">Secure Login</button>
-        </div>
-    </div>
-
     <div id="app-container">
         <aside id="sidebar">
-            <div style="padding: 20px; text-align: center;">
-                <div style="background:white; padding:10px; border-radius:8px; display:inline-block;">
-                    <img id="sidebar-logo" src="" style="display:none; max-width:120px; height:auto;">
+            <div class="sidebar-logo-container">
+                <div class="logo-box">
+                    <img id="sidebar-logo" src="https://i.ibb.co/p6V6n70/Brand-Orb-Biz.png" alt="Logo">
                 </div>
             </div>
-            <nav style="display:flex; flex-direction:column; padding:20px; gap:10px;">
-                <button onclick="window.ui.showTab('MAP')" style="background:none; border:none; color:white; text-align:left; cursor:pointer;">Route Reports</button>
-                <button onclick="window.ui.showTab('CLUSTER')" style="background:none; border:none; color:white; text-align:left; cursor:pointer;">Cluster Graphs</button>
+            <nav class="nav-menu">
+                <div class="nav-item active" onclick="window.ui.showTab('MAP')">
+                    <i class="fas fa-route"></i> Route Reports
+                </div>
+                <div class="nav-item" onclick="window.ui.showTab('CLUSTER')">
+                    <i class="fas fa-project-diagram"></i> Cluster Graphs
+                </div>
             </nav>
         </aside>
 
         <main id="main-content">
-            <header style="background:white; padding:20px 40px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #ddd;">
-                <div><h1>BrandOrb</h1><p>Intelligence Dashboard</p></div>
-                <div style="display:flex; gap:10px;">
-                    <select id="client-filter"><option>General</option></select>
-                    <button onclick="window.ui.openModal()" style="background:#0f172a; color:#38bdf8; border:none; padding:10px 20px; border-radius:6px; cursor:pointer;">+ Add Report</button>
+            <header id="brand-header">
+                <div class="header-left">
+                    <h1>BrandOrb</h1>
+                    <p>INTELLIGENCE DASHBOARD</p>
+                </div>
+                <div class="action-bar">
+                    <input type="text" class="search-input" id="report-search" placeholder="Search report database..." onkeyup="window.ui.filterTable()">
+                    <select class="client-filter" id="client-select" onchange="window.ui.filterTable()">
+                        <option value="All">All Clients</option>
+                        <option value="General">General</option>
+                        <option value="TRX">TRX</option>
+                    </select>
+                    <button class="btn-premium btn-dark btn-icon-only" title="Add Client" onclick="alert('Client portal coming soon')">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                    <button class="btn-premium btn-dark" onclick="window.ui.openModal()">
+                        <i class="fas fa-plus"></i> Add Report
+                    </button>
                 </div>
             </header>
 
-            <div id="list-view" style="padding:40px;">
-                <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
-                    <thead style="background:#f1f5f9; text-align:left;">
-                        <tr><th style="padding:15px;">Report</th><th>Client</th><th>Type</th><th style="text-align:right; padding-right:15px;">Action</th></tr>
+            <div class="dashboard-card">
+                <table class="corporate-table">
+                    <thead>
+                        <tr>
+                            <th>Report Name</th>
+                            <th>Client</th>
+                            <th>Type</th>
+                            <th style="text-align:right">Action</th>
+                        </tr>
                     </thead>
-                    <tbody id="report-rows"></tbody>
+                    <tbody id="report-rows">
+                        </tbody>
                 </table>
-            </div>
-
-            <div id="viz-view" style="display:none; padding:20px;">
-                <button onclick="window.ui.backToList()" style="padding:8px 15px; margin-bottom:10px;">← Back</button>
-                <h2 id="viz-title"></h2>
-                <div id="map-element"></div>
             </div>
         </main>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="ui-logic.js"></script>
-    <script src="viz-logic.js"></script>
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Configure New Report</h3>
+            <div class="form-group">
+                <label>Report Title</label>
+                <input type="text" id="modal-title" placeholder="e.g., Q4 Logistics Flow">
+            </div>
+            <div class="form-group">
+                <label>CSV Data Source (URL)</label>
+                <input type="text" id="modal-url" placeholder="Paste Google Sheet CSV link">
+            </div>
+            <div class="form-group">
+                <label>Visual Type</label>
+                <select id="modal-type">
+                    <option value="MAP">Route Map</option>
+                    <option value="CLUSTER">Cluster Graph</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:30px;">
+                <button class="btn-premium btn-dark" style="flex:1; justify-content:center;" onclick="window.ui.saveReport()">Publish Report</button>
+                <button class="btn-premium" style="background:#f1f5f9; color:var(--text-grey);" onclick="window.ui.closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="interface-logic.js"></script>
 </body>
 </html>
