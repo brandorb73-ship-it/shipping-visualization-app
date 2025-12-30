@@ -4,52 +4,45 @@
     --bg: #f8fafc;
 }
 
-body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: 'Inter', sans-serif; }
+body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
 
+/* THE FULL WIDTH FIX */
 #app-container { 
     display: flex; 
-    width: 100vw; /* Force full viewport width */
+    width: 100vw; 
     height: 100vh; 
 }
 
 #sidebar { 
     width: 260px; 
     background: var(--navy); 
-    flex-shrink: 0; /* Prevents sidebar from squashing */
+    flex-shrink: 0; 
 }
 
 #main-content { 
-    flex-grow: 1; /* This forces the content to take up all remaining space */
+    flex-grow: 1; /* Forces content to take up 100% of remaining width */
     background: var(--bg);
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
+    overflow-y: auto;
 }
 
-/* Header stretches full width */
-#brand-header { 
-    width: 100%; 
-    box-sizing: border-box;
-    background: white; 
-    padding: 20px 40px; 
-    border-bottom: 1px solid #e2e8f0;
-}
-
-/* Logo Fix */
+/* Corporate Logo Resizing */
 .logo-box-white {
-    width: 120px; height: 120px; margin: 0 auto;
+    width: 110px; height: 110px; margin: 0 auto;
     background: white; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
     overflow: hidden;
 }
 .global-logo-src {
     width: 100% !important; height: 100% !important;
-    object-fit: contain !important;
+    object-fit: contain !important; /* Fits perfectly in the square */
+    padding: 5px;
 }
 
-/* Full Width Visualization */
-#map-element, #cluster-element {
+/* Visualization Containers */
+#map-element {
     width: 100% !important;
     height: calc(100vh - 120px);
-    background: #eee;
+    background: #ffffff;
 }
