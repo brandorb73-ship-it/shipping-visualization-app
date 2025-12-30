@@ -1,4 +1,4 @@
-let DB_URL = "YOUR_APPS_SCRIPT_URL_HERE"; 
+let DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; 
 let reports = [];
 let selectedType = 'map';
 let mapInstance = null;
