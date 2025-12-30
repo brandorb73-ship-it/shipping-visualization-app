@@ -51,17 +51,16 @@
                 </div>
                 <div class="header-actions">
                     <select id="client-select"><option value="General">General</option></select>
-                    <button class="btn-add-client-plus" onclick="window.addNewClient()">
-                        <i class="fas fa-plus"></i>
+                    <button class="btn-icon" onclick="window.addNewClient()" title="Add Client">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                    <button class="btn-primary-add" onclick="window.openModal()">
+                        <i class="fas fa-plus"></i> Add Report
                     </button>
                 </div>
             </header>
 
             <div id="page-list" class="content-page">
-                <div class="action-strip">
-                    <input type="text" id="main-search" placeholder="Search database..." oninput="window.filterTable()">
-                    <button class="btn-primary-add" onclick="window.openModal()">+ Add New Report</button>
-                </div>
                 <div class="table-card">
                     <table class="corporate-table">
                         <thead>
@@ -99,7 +98,7 @@
             </div>
             <div class="modal-buttons">
                 <button onclick="window.saveNewReport()" class="btn-primary-add">Publish</button>
-                <button onclick="window.closeModal()" class="btn-cancel">Cancel</button>
+                <button onclick="window.closeModal()">Cancel</button>
             </div>
         </div>
     </div>
