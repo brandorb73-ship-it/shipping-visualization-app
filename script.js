@@ -1,3 +1,16 @@
+window.attemptLogin = function() {
+    const pass = document.getElementById('pass-input').value;
+    if (pass === "admin123") { // Matches your access key
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        sessionStorage.setItem('isLoggedIn', 'true');
+        if (typeof window.fetchReports === "function") window.fetchReports();
+    } else {
+        alert("Invalid Access Key");
+    }
+};
+
+
 window.ACCESS_KEY = "Cyber$supe73r";
 window.DB_URL = "https://script.google.com/macros/s/AKfycbzvnTinsKASNna9T_T9ODSy3FiBAU8BN-VciXWmbxdhGWaSUQKZmwnuT9nRW8kORq0/exec"; 
 let currentCategory = 'MAP';
