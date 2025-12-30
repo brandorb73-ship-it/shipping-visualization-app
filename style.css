@@ -9,54 +9,43 @@
 
 body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg-main); color: var(--navy-deep); }
 
-/* --- PROFESSIONAL LOGIN SCREEN --- */
+/* --- PROFESSIONAL LOGIN --- */
 #login-overlay { 
     position: fixed; inset: 0; 
     background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); 
     z-index: 9999; display: flex; align-items: center; justify-content: center; 
 }
-
 .login-card { 
     background: white; padding: 50px 40px; border-radius: 12px; 
-    width: 380px; text-align: center; 
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+    width: 380px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
 }
 
-/* FIXED LOGO UPLOAD BOX */
-#logo-drop-zone { 
-    margin: 0 auto 30px; cursor: pointer; 
+/* LOGO BOX FIXES */
+#logo-drop-zone, .logo-box-white { 
+    margin: 0 auto 25px; cursor: pointer; 
     width: 120px; height: 120px; 
-    border: 2px dashed var(--brand-blue); 
-    background: #f0f9ff; 
+    border: 2px dashed var(--brand-blue); background: #f0f9ff; 
     display: flex; align-items: center; justify-content: center; 
-    border-radius: 12px; overflow: hidden; position: relative;
+    border-radius: 12px; overflow: hidden; 
 }
 
+/* THE FIX FOR OVERSIZED LOGOS */
 #login-display-logo, .global-logo-src { 
-    width: 100% !important; 
-    height: 100% !important; 
-    object-fit: contain !important; /* This prevents the "oversized" look */
-    display: block;
+    width: 100%; height: 100%; 
+    object-fit: contain !important; /* Forces logo to fit square without stretching */
+    padding: 10px; box-sizing: border-box;
 }
 
-/* --- SIDEBAR LOGO FIX --- */
-.logo-box-white { 
-    background: white; padding: 10px; border-radius: 12px; 
-    width: 100px; height: 100px; 
-    display: flex; align-items: center; justify-content: center; 
-    overflow: hidden; margin: 0 auto;
-}
+/* --- SIDEBAR & CONTENT --- */
+#sidebar { width: 260px; background: var(--navy-deep); color: white; height: 100vh; position: fixed; }
+.sidebar-logo-area { padding: 40px 20px; text-align: center; }
+.logo-box-white { background: white; border: none; }
 
-/* --- TABLE & BUTTONS --- */
-.btn-view { 
-    background: var(--navy-deep); color: white; border: none; 
-    padding: 8px 20px; border-radius: 6px; cursor: pointer; 
-    font-weight: 600; font-size: 13px; transition: 0.2s;
-}
+#main-content { margin-left: 260px; min-height: 100vh; }
+#brand-header { background: white; padding: 25px 40px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+
+/* --- BUTTONS --- */
+.btn-primary { background: var(--navy-deep); color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
+.btn-view { background: var(--navy-deep); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
 .btn-view:hover { background: var(--brand-blue); color: var(--navy-deep); }
-
-.type-pill {
-    font-size: 11px; font-weight: 700; color: var(--slate-text);
-    background: #f1f5f9; padding: 4px 10px; border-radius: 4px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-}
+.btn-delete { color: #ef4444; background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; margin-left: 10px; }
