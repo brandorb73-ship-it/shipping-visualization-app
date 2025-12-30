@@ -1,3 +1,27 @@
+/* surgical fix for layout and login formatting */
+#login-overlay { 
+    position: fixed; inset: 0; 
+    background: #0f172a; /* Dark Navy Background */
+    z-index: 9999; display: flex; align-items: center; justify-content: center; 
+}
+
+.login-card { 
+    background: white; padding: 40px; border-radius: 12px; 
+    width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+}
+
+#app-container { 
+    display: flex; width: 100vw; height: 100vh; 
+}
+
+#sidebar { 
+    width: 260px; background: #0f172a; color: white; flex-shrink: 0; 
+}
+
+#main-content { 
+    flex-grow: 1; overflow-y: auto; background: #f8fafc; 
+}
+
 :root {
     --navy: #0f172a;
     --navy-light: #1e293b;
