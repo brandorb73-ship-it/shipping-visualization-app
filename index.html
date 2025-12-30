@@ -19,7 +19,9 @@
             <input type="file" id="login-logo-upload" hidden onchange="handleLogoUpload(this)">
             <h2 style="font-family: 'Montserrat'; margin-bottom: 25px;">BrandOrb Login</h2>
             <input type="password" id="pass-input" placeholder="Access Key">
-            <button onclick="attemptLogin()">Enter Dashboard</button>
+            <button type="button" onclick="window.attemptLogin()" style="width:100%; padding:12px; background:#38bdf8; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:#0f172a;">
+    Enter Dashboard
+</button>
             <p id="login-error" style="display:none; color:red; margin-top:15px;">Invalid Key</p>
         </div>
     </div>
