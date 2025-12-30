@@ -116,3 +116,10 @@ function initClusterGraph(data) {
         node.attr("cx", d => d.x).attr("cy", d => d.y);
     });
 }
+/* Fix for the blank visualization area */
+#map-element { 
+    width: 100% !important; 
+    height: 80vh !important; /* Force a height so the map can draw */
+    min-height: 500px;
+    background: #ffffff;
+}
