@@ -2,121 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandOrb | Supply Chain Intelligence</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <title>BrandOrb Intelligence</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-
-    <div id="login-overlay">
-        <div class="login-card">
-            <div id="logo-drop-zone" onclick="document.getElementById('login-logo-upload').click()">
-                <img id="login-display-logo" src="" style="display:none;">
-                <span id="login-logo-placeholder">+ Upload Corporate Logo</span>
-            </div>
-            <input type="file" id="login-logo-upload" hidden onchange="window.handleLogoUpload(this)">
-            
-            <h2 style="font-family: 'Montserrat'; color: #0f172a; margin-bottom: 8px;">BrandOrb</h2>
-            <p style="color: #64748b; font-size: 13px; margin-bottom: 25px;">Intelligence Dashboard Access</p>
-            
-            <input type="password" id="pass-input" placeholder="Enter Access Key" style="width:100%; padding:14px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:20px; box-sizing:border-box;">
-            
-            <button onclick="window.attemptLogin()" style="width:100%; padding:14px; background:#0f172a; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; transition: 0.3s;">
-                Secure Login
-            </button>
-            <p id="login-error" style="display:none; color:#ef4444; font-size:13px; margin-top:15px; font-weight:600;">Invalid Access Key</p>
-        </div>
-    </div>
-
-    <div id="app-container" style="display:none;">
+    <div id="app-container">
         <aside id="sidebar">
             <div class="sidebar-logo-area">
-                <div class="logo-box-white">
-                    <img class="global-logo-src" src="" style="display:none;">
-                </div>
+                <div class="logo-box-white"><img class="global-logo-src" src=""></div>
             </div>
-            <div class="sidebar-header">ANALYTICS</div>
-            <nav class="nav-menu">
-                <a href="#" class="nav-link active" id="nav-map" onclick="window.showPage('map')"><i class="fas fa-route"></i> Route Reports</a>
-                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
+            <nav>
+                <a href="#" class="nav-link" id="nav-map" onclick="window.showPage('map')">Route Reports</a>
+                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')">Cluster Graphs</a>
             </nav>
         </aside>
 
         <main id="main-content">
-            <header id="brand-header">
-                <div>
-                    <h1 class="main-title">BrandOrb</h1>
-                    <p class="sub-title">Intelligence Dashboard</p>
-                </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <select id="client-select" style="padding:10px; border-radius:8px; border:1px solid #e2e8f0;">
-                        <option value="General">General</option>
-                    </select>
-                    <button onclick="window.addNewClient()" style="padding:10px 15px; background:#f1f5f9; border:none; border-radius:8px; cursor:pointer; font-weight:700;">+</button>
-                </div>
-            </header>
-
-            <div id="page-list" class="content-page">
+            <div id="page-list">
                 <div class="action-strip">
-                    <input type="text" id="main-search" placeholder="Search report database..." oninput="window.filterTable()">
+                    <input type="text" id="main-search">
                     <button class="btn-primary" onclick="window.openModal()">+ Add New Report</button>
                 </div>
                 <div class="table-card">
                     <table class="corporate-table">
-                        <thead>
-                            <tr>
-                                <th>Report Details</th>
-                                <th>Client</th>
-                                <th>Date Published</th>
-                                <th>Type</th>
-                                <th style="text-align:right">Action</th>
-                            </tr>
-                        </thead>
                         <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
             </div>
 
-            <div id="page-view" class="content-page" style="display:none;">
-                <div class="viz-title-bar">
-                    <button onclick="window.goBackToList()" class="btn-view" style="background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);">
-                        <i class="fas fa-arrow-left"></i> Back
-                    </button>
-                    <h2 id="viewing-title" style="color:white; margin:0; font-family:'Montserrat'; font-size:18px;"></h2>
+            <div id="page-view" style="display:none; width:100%;">
+                <div class="viz-title-bar" style="background:#0f172a; padding:15px; display:flex; align-items:center; gap:20px;">
+                    <button onclick="window.goBackToList()" style="padding:5px 15px;">Back</button>
+                    <h2 id="viewing-title" style="color:white; margin:0;"></h2>
                 </div>
-                <div id="map-element" style="height: calc(100vh - 100px); width: 100%;"></div>
+                <div id="map-element"></div>
             </div>
         </main>
     </div>
-
-    <div id="report-modal" class="modal">
-        <div class="modal-content">
-            <h3 style="margin-top:0;">Configure New Report</h3>
-            <div class="form-group">
-                <label>Report Title</label>
-                <input type="text" id="rep-title" placeholder="e.g. Q4 Trade Lanes">
-            </div>
-            <div class="form-group">
-                <label>CSV Data URL</label>
-                <input type="text" id="rep-url" placeholder="Google Sheet CSV Link">
-            </div>
-            <div class="form-group">
-                <label>Category</label>
-                <select id="rep-type">
-                    <option value="MAP">Route Map</option>
-                    <option value="CLUSTER">Cluster Graph</option>
-                </select>
-            </div>
-            <div style="display:flex; gap:12px; margin-top:25px;">
-                <button onclick="window.saveNewReport()" class="btn-primary" style="flex:1">Publish</button>
-                <button onclick="window.closeModal()" style="flex:1; background:#94a3b8; color:white; border:none; border-radius:8px; cursor:pointer;">Cancel</button>
-            </div>
-        </div>
-    </div>
-
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="script.js"></script>
 </body>
