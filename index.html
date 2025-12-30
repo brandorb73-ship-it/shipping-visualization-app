@@ -28,21 +28,32 @@
     <div id="app-container" style="display:none;">
         <aside id="sidebar">
             <div class="sidebar-logo-area">
-                <div class="logo-box-white"><img class="global-logo-src" src="" style="display:none;"></div>
+                <div class="logo-box-white">
+                    <img class="global-logo-src" id="sidebar-logo" src="" style="display:none;">
+                </div>
             </div>
             <nav class="nav-menu">
                 <div class="sidebar-header">ANALYTICS</div>
-                <a href="#" class="nav-link active" onclick="window.showPage('map')"><i class="fas fa-route"></i> Route Reports</a>
-                <a href="#" class="nav-link" onclick="window.showPage('cluster')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
+                <a href="#" class="nav-link active" id="nav-map" onclick="window.showPage('map')">
+                    <i class="fas fa-route"></i> Route Reports
+                </a>
+                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')">
+                    <i class="fas fa-project-diagram"></i> Cluster Graphs
+                </a>
             </nav>
         </aside>
 
         <main id="main-content">
             <header id="brand-header">
-                <div class="header-titles"><h1>BrandOrb</h1><p>Intelligence Dashboard</p></div>
+                <div class="header-titles">
+                    <h1>BrandOrb</h1>
+                    <p>INTELLIGENCE DASHBOARD</p>
+                </div>
                 <div class="header-actions">
                     <select id="client-select"><option value="General">General</option></select>
-                    <button class="btn-add-client-plus" onclick="window.addNewClient()"><i class="fas fa-plus"></i></button>
+                    <button class="btn-add-client-plus" onclick="window.addNewClient()">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
             </header>
 
@@ -53,7 +64,15 @@
                 </div>
                 <div class="table-card">
                     <table class="corporate-table">
-                        <thead><tr><th>Report</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Report</th>
+                                <th>Client</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th style="text-align:right">Action</th>
+                            </tr>
+                        </thead>
                         <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
@@ -72,12 +91,15 @@
     <div id="report-modal" class="modal">
         <div class="modal-content">
             <h3>Configure New Report</h3>
-            <input type="text" id="rep-title" placeholder="Report Title">
-            <input type="text" id="rep-url" placeholder="CSV URL">
-            <select id="rep-type"><option value="MAP">Map</option><option value="CLUSTER">Cluster</option></select>
+            <div class="form-group"><label>Title</label><input type="text" id="rep-title"></div>
+            <div class="form-group"><label>CSV URL</label><input type="text" id="rep-url"></div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="rep-type"><option value="MAP">Map</option><option value="CLUSTER">Cluster</option></select>
+            </div>
             <div class="modal-buttons">
                 <button onclick="window.saveNewReport()" class="btn-primary-add">Publish</button>
-                <button onclick="window.closeModal()">Cancel</button>
+                <button onclick="window.closeModal()" class="btn-cancel">Cancel</button>
             </div>
         </div>
     </div>
