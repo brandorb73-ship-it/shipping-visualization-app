@@ -3,35 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandOrb | Intelligence Dashboard</title>
+    <title>BrandOrb | Supply Chain Intelligence</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
     <div id="login-overlay">
         <div class="login-card">
-            <div class="logo-box-white" style="margin: 0 auto; cursor: pointer;" onclick="document.getElementById('login-logo-upload').click()">
-                <img id="login-display-logo" src="" style="display:none;">
-                <span id="login-logo-placeholder">Upload Brand Logo</span>
+            <div class="logo-box-white" style="margin: 0 auto; cursor: pointer; display: flex; flex-direction: column; align-items: center;" onclick="document.getElementById('login-logo-upload').click()">
+                <img id="login-display-logo" src="" style="display:none; max-width: 100%; max-height: 100%;">
+                <span id="login-logo-placeholder" style="font-size: 12px; color: #64748b; font-weight: 600;">Upload Brand Logo</span>
             </div>
             <input type="file" id="login-logo-upload" hidden onchange="handleLogoUpload(this)">
-            <h2>BrandOrb Intelligence</h2>
-            <input type="password" id="pass-input" placeholder="Enter Access Key">
+            <h2 style="margin-top: 25px; font-family: 'Montserrat';">BrandOrb Intelligence</h2>
+            <input type="password" id="pass-input" placeholder="Enter Access Key" onkeypress="if(event.key === 'Enter') attemptLogin()">
             <button onclick="attemptLogin()">Access Dashboard</button>
-            <p id="login-error">Invalid access key.</p>
+            <p id="login-error" style="color: #ef4444; font-size: 13px; margin-top: 15px; display: none;">Invalid access key. Please try again.</p>
         </div>
     </div>
 
     <div id="app-container" style="display:none;">
+        
         <aside id="sidebar">
             <div class="sidebar-logo-area">
-                <div class="logo-box-white small">
+                <div class="logo-box-white" style="width: 100px; height: 100px; border-radius: 12px;">
                     <img class="global-logo-src" src="" style="display:none;">
                 </div>
             </div>
-            <div class="sidebar-header">MENU</div>
+            <div class="sidebar-header">ADMINISTRATION</div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link"><i class="fas fa-id-card"></i> Accounts</a>
+                <a href="#" class="nav-link"><i class="fas fa-users"></i> Users</a>
+            </nav>
+            <div class="sidebar-header">ANALYTICS</div>
             <nav class="nav-menu">
                 <a href="#" class="nav-link active" onclick="showPage('list')"><i class="fas fa-route"></i> Route Reports</a>
                 <a href="#" class="nav-link" onclick="showPage('list')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
@@ -46,7 +53,10 @@
                 </div>
                 <div class="top-right-controls">
                     <div class="client-pill">
-                        <select id="client-select"><option value="All">All Clients</option></select>
+                        <select id="client-select">
+                            <option value="General">General</option>
+                            <option value="All Clients">All Clients</option>
+                        </select>
                         <button class="add-client-btn" onclick="addNewClient()">+</button>
                     </div>
                 </div>
@@ -54,48 +64,70 @@
 
             <div class="action-strip">
                 <input type="text" id="main-search" placeholder="Search reports..." oninput="filterTable()">
-                <button class="btn-publish" onclick="showPage('create')">+ Add New Report</button>
+                <button class="btn-publish" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="showPage('create')">
+                    + Add New Report
+                </button>
             </div>
 
             <div id="page-list" class="content-page">
-                <div class="table-card">
+                <div class="table-card" style="margin: 0 40px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
                     <table class="corporate-table">
                         <thead>
-                            <tr><th>Report Details</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr>
+                            <tr>
+                                <th>Report Title</th>
+                                <th>Client</th>
+                                <th>Created</th>
+                                <th>Type</th>
+                                <th style="text-align:right">Action</th>
+                            </tr>
                         </thead>
-                        <tbody id="report-list-rows"></tbody>
+                        <tbody id="report-list-rows">
+                            </tbody>
                     </table>
                 </div>
             </div>
 
             <div id="page-create" class="content-page" style="display:none;">
-                <div class="form-container">
-                    <h2>Configure Intelligence Report</h2>
-                    <div class="form-stack">
-                        <div class="form-group"><label>Report Title</label><input type="text" id="report-name"></div>
-                        <div class="form-group"><label>Google Sheet CSV URL</label><input type="text" id="sheet-url"></div>
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" id="include-logo" checked>
-                            <label for="include-logo">Include Brand Logo in Report View</label>
+                <div class="form-container" style="max-width: 800px; margin: 40px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);">
+                    <h2 style="margin-bottom: 10px;">Create Intelligence Report</h2>
+                    <p style="color: #64748b; margin-bottom: 30px;">Configure your data source and visualization style.</p>
+                    
+                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div class="form-group">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Report Title</label>
+                            <input type="text" id="report-name" placeholder="e.g. Q4 Logistics Flow" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
+                        </div>
+                        <div class="form-group">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">CSV URL</label>
+                            <input type="text" id="sheet-url" placeholder="Google Sheet CSV Link" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
                         </div>
                     </div>
-                    <div class="type-picker-row">
-                        <div class="type-card active" id="pick-map" onclick="selectType('map')"><i class="fas fa-map-marked-alt"></i> Route Map</div>
-                        <div class="type-card" id="pick-cluster" onclick="selectType('cluster')"><i class="fas fa-network-wired"></i> Cluster Graph</div>
+
+                    <label style="display: block; font-weight: 600; margin-bottom: 15px;">Select Visualization Type</label>
+                    <div class="type-picker-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                        <div class="type-card active" id="pick-map" onclick="selectType('map')" style="border: 2px solid #38bdf8; padding: 20px; border-radius: 12px; cursor: pointer; text-align: center;">
+                            <i class="fas fa-map-marked-alt" style="font-size: 24px; color: #38bdf8; margin-bottom: 10px;"></i>
+                            <div style="font-weight: 600;">Route Map</div>
+                        </div>
+                        <div class="type-card" id="pick-cluster" onclick="selectType('cluster')" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; text-align: center;">
+                            <i class="fas fa-project-diagram" style="font-size: 24px; color: #64748b; margin-bottom: 10px;"></i>
+                            <div style="font-weight: 600;">Cluster Graph</div>
+                        </div>
                     </div>
-                    <div class="form-buttons">
-                        <button class="btn-save" onclick="processAndSave()">Publish & Save</button>
-                        <button class="btn-cancel" onclick="showPage('list')">Cancel</button>
+
+                    <div class="form-group checkbox-group" style="margin-bottom: 30px; display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="include-logo" checked style="width: 18px; height: 18px;">
+                        <label for="include-logo" style="font-size: 14px; font-weight: 600;">Display Brand Logo on this report</label>
+                    </div>
+
+                    <div class="form-buttons" style="display: flex; gap: 15px;">
+                        <button class="btn-save" onclick="processAndSave()" style="flex: 1; background: #0f172a; color: white; padding: 15px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Publish & Save</button>
+                        <button class="btn-cancel" onclick="showPage('list')" style="padding: 15px 30px; border-radius: 8px; font-weight: 600; border: 1px solid #e2e8f0; cursor: pointer;">Cancel</button>
                     </div>
                 </div>
             </div>
 
             <div id="page-view" class="content-page" style="display:none;">
-                <div class="viz-title-bar">
-                    <div class="viz-left">
-                        <button class="back-btn" onclick="showPage('list')"><i class="fas fa-arrow-left"></i></button>
-                        <img id="viz-logo" class="global-logo-src" src="" style="height:30px; margin-left:15px; display:none;">
-                        <h3 id="viewing-title"></h3>
-                    </div>
-                    <div class="viz-controls" id="map-filters-ui">
-                        <select id="color-filter
+                <div class="viz-title-bar" style="background: #0f172a; color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="viz-left" style="display: flex; align-items: center; gap: 20px;">
+                        <button class="back-btn" onclick="showPage('list')" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
