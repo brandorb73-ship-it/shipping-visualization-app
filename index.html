@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandOrb | Supply Chain Intelligence</title>
+    <title>BrandOrb | Intelligence Dashboard</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
@@ -11,48 +11,41 @@
 </head>
 <body>
 
- <div id="login-overlay" style="position: fixed; inset: 0; background: #0f172a; z-index: 10000; display: flex; align-items: center; justify-content: center;">
-    <div class="login-card" style="background: white; padding: 40px; border-radius: 20px; width: 350px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
-        
-        <div id="logo-drop-zone" 
-             onclick="document.getElementById('login-logo-upload').click()" 
-             style="margin: 0 auto 20px auto; cursor: pointer; width: 150px; height: 100px; border: 2px dashed #38bdf8; background: #f0f9ff; display: flex; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden;">
+    <div id="login-overlay" style="position: fixed; inset: 0; background: #0f172a; z-index: 10000; display: flex; align-items: center; justify-content: center;">
+        <div class="login-card" style="background: white; padding: 40px; border-radius: 24px; width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4);">
             
-            <img id="login-display-logo" src="" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;">
-            <span id="login-logo-placeholder" style="font-size: 12px; color: #38bdf8; font-weight: 600;">+ Upload Logo</span>
+            <div id="logo-drop-zone" 
+                 onclick="document.getElementById('login-logo-upload').click()" 
+                 style="margin: 0 auto 20px auto; cursor: pointer; width: 150px; height: 100px; border: 2px dashed #38bdf8; background: #f0f9ff; display: flex; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden;">
+                <img id="login-display-logo" src="" style="display:none; max-width: 100%; max-height: 100%; object-fit: contain;">
+                <span id="login-logo-placeholder" style="font-size: 12px; color: #38bdf8; font-weight: 600;">+ Upload Logo</span>
+            </div>
+            
+            <input type="file" id="login-logo-upload" accept="image/*" style="display:none;" onchange="handleLogoUpload(this)">
+            
+            <h2 style="margin: 0 0 20px 0; font-family: 'Montserrat'; color: #0f172a;">BrandOrb</h2>
+            
+            <input type="password" id="pass-input" placeholder="Enter Access Key" 
+                   style="width:100%; padding:14px; border:1px solid #cbd5e1; border-radius:10px; margin-bottom: 20px; font-size: 16px; box-sizing: border-box;">
+            
+            <button onclick="attemptLogin()" 
+                    style="width:100%; padding:14px; background: #38bdf8; color: #0f172a; border: none; border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer;">
+                Access Dashboard
+            </button>
+            
+            <p id="login-error" style="color: #ef4444; font-size: 13px; margin-top: 15px; display: none; font-weight: 600;">
+                Invalid Access Key. Please try again.
+            </p>
         </div>
-        
-        <input type="file" id="login-logo-upload" accept="image/*" style="display:none;" onchange="handleLogoUpload(this)">
-        
-        <h2 style="margin: 0 0 20px 0; font-family: 'Montserrat'; color: #0f172a;">BrandOrb</h2>
-        
-        <input type="password" id="pass-input" placeholder="Enter Access Key" 
-               style="width:100%; padding:14px; border:1px solid #cbd5e1; border-radius:10px; margin-bottom: 20px; font-size: 16px; box-sizing: border-box;">
-        
-        <button onclick="attemptLogin()" 
-                style="width:100%; padding:14px; background: #38bdf8; color: #0f172a; border: none; border-radius: 10px; font-weight: 700; font-size: 16px; cursor: pointer;">
-            Access Dashboard
-        </button>
-        
-        <p id="login-error" style="color: #ef4444; font-size: 13px; margin-top: 15px; display: none; font-weight: 600;">
-            Invalid Access Key. Please try again.
-        </p>
     </div>
-</div>
 
     <div id="app-container" style="display:none;">
-        
         <aside id="sidebar">
             <div class="sidebar-logo-area">
                 <div class="logo-box-white" style="width: 100px; height: 100px; border-radius: 12px;">
                     <img class="global-logo-src" src="" style="display:none;">
                 </div>
             </div>
-            <div class="sidebar-header">ADMINISTRATION</div>
-            <nav class="nav-menu">
-                <a href="#" class="nav-link"><i class="fas fa-id-card"></i> Accounts</a>
-                <a href="#" class="nav-link"><i class="fas fa-users"></i> Users</a>
-            </nav>
             <div class="sidebar-header">ANALYTICS</div>
             <nav class="nav-menu">
                 <a href="#" class="nav-link active" onclick="showPage('list')"><i class="fas fa-route"></i> Route Reports</a>
@@ -64,14 +57,11 @@
             <header id="brand-header">
                 <div class="brand-center-text">
                     <h1 class="main-title">BrandOrb</h1>
-                    <p class="sub-title">Supply Chain Intelligence Dashboard</p>
+                    <p class="sub-title">Intelligence Dashboard</p>
                 </div>
                 <div class="top-right-controls">
                     <div class="client-pill">
-                        <select id="client-select">
-                            <option value="General">General</option>
-                            <option value="All Clients">All Clients</option>
-                        </select>
+                        <select id="client-select"><option value="General">General</option></select>
                         <button class="add-client-btn" onclick="addNewClient()">+</button>
                     </div>
                 </div>
@@ -79,70 +69,45 @@
 
             <div class="action-strip">
                 <input type="text" id="main-search" placeholder="Search reports..." oninput="filterTable()">
-                <button class="btn-publish" style="background: #0f172a; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;" onclick="showPage('create')">
-                    + Add New Report
-                </button>
+                <button class="btn-publish" onclick="showPage('create')">+ Add New Report</button>
             </div>
 
             <div id="page-list" class="content-page">
-                <div class="table-card" style="margin: 0 40px; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+                <div class="table-card">
                     <table class="corporate-table">
                         <thead>
-                            <tr>
-                                <th>Report Title</th>
-                                <th>Client</th>
-                                <th>Created</th>
-                                <th>Type</th>
-                                <th style="text-align:right">Action</th>
-                            </tr>
+                            <tr><th>Report Details</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr>
                         </thead>
-                        <tbody id="report-list-rows">
-                            </tbody>
+                        <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
             </div>
 
             <div id="page-create" class="content-page" style="display:none;">
-                <div class="form-container" style="max-width: 800px; margin: 40px auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);">
-                    <h2 style="margin-bottom: 10px;">Create Intelligence Report</h2>
-                    <p style="color: #64748b; margin-bottom: 30px;">Configure your data source and visualization style.</p>
-                    
-                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                        <div class="form-group">
-                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">Report Title</label>
-                            <input type="text" id="report-name" placeholder="e.g. Q4 Logistics Flow" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
-                        </div>
-                        <div class="form-group">
-                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">CSV URL</label>
-                            <input type="text" id="sheet-url" placeholder="Google Sheet CSV Link" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;">
-                        </div>
-                    </div>
-
-                    <label style="display: block; font-weight: 600; margin-bottom: 15px;">Select Visualization Type</label>
-                    <div class="type-picker-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
-                        <div class="type-card active" id="pick-map" onclick="selectType('map')" style="border: 2px solid #38bdf8; padding: 20px; border-radius: 12px; cursor: pointer; text-align: center;">
-                            <i class="fas fa-map-marked-alt" style="font-size: 24px; color: #38bdf8; margin-bottom: 10px;"></i>
-                            <div style="font-weight: 600;">Route Map</div>
-                        </div>
-                        <div class="type-card" id="pick-cluster" onclick="selectType('cluster')" style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; cursor: pointer; text-align: center;">
-                            <i class="fas fa-project-diagram" style="font-size: 24px; color: #64748b; margin-bottom: 10px;"></i>
-                            <div style="font-weight: 600;">Cluster Graph</div>
-                        </div>
-                    </div>
-
-                    <div class="form-group checkbox-group" style="margin-bottom: 30px; display: flex; align-items: center; gap: 10px;">
-                        <input type="checkbox" id="include-logo" checked style="width: 18px; height: 18px;">
-                        <label for="include-logo" style="font-size: 14px; font-weight: 600;">Display Brand Logo on this report</label>
-                    </div>
-
-                    <div class="form-buttons" style="display: flex; gap: 15px;">
-                        <button class="btn-save" onclick="processAndSave()" style="flex: 1; background: #0f172a; color: white; padding: 15px; border-radius: 8px; font-weight: 700; border: none; cursor: pointer;">Publish & Save</button>
-                        <button class="btn-cancel" onclick="showPage('list')" style="padding: 15px 30px; border-radius: 8px; font-weight: 600; border: 1px solid #e2e8f0; cursor: pointer;">Cancel</button>
-                    </div>
-                </div>
+                <button onclick="showPage('list')">Back</button>
             </div>
 
             <div id="page-view" class="content-page" style="display:none;">
-                <div class="viz-title-bar" style="background: #0f172a; color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center;">
-                    <div class="viz-left" style="display: flex; align-items: center; gap: 20px;">
-                        <button class="back-btn" onclick="showPage('list')" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer;">
+                <div class="viz-title-bar">
+                    <button class="back-btn" onclick="showPage('list')">Back</button>
+                    <h3 id="viewing-title"></h3>
+                    <button class="btn-export" onclick="exportToPDF()">Export PDF</button>
+                </div>
+                <div id="viz-wrapper">
+                    <div id="map-element" style="height: 600px;"></div>
+                    <div id="cluster-element" style="display:none; height: 600px;"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-ant-path@1.1.2/dist/leaflet-ant-path.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-polyline-decorator@1.6.0/dist/leaflet.polyline.decorator.js"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    
+    <script src="script.js" onerror="alert('Error: script.js not found. Check your file name!')"></script>
+
+</body>
+</html>
