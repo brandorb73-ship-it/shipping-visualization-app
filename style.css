@@ -9,42 +9,54 @@
 
 body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg-main); color: var(--navy-deep); }
 
-/* --- LOGIN & LOGO --- */
-#login-overlay { position: fixed; inset: 0; background: var(--navy-deep); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-card { background: white; padding: 40px; border-radius: 16px; width: 350px; text-align: center; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-#logo-drop-zone { margin: 0 auto 20px; cursor: pointer; width: 140px; height: 90px; border: 2px dashed var(--brand-blue); background: #f0f9ff; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+/* --- PROFESSIONAL LOGIN SCREEN --- */
+#login-overlay { 
+    position: fixed; inset: 0; 
+    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); 
+    z-index: 9999; display: flex; align-items: center; justify-content: center; 
+}
 
-/* --- SIDEBAR --- */
-#sidebar { width: 260px; background: var(--navy-deep); color: white; height: 100vh; position: fixed; }
-.sidebar-logo-area { padding: 40px 30px; display: flex; justify-content: center; }
-.logo-box-white { background: white; padding: 12px; border-radius: 12px; width: 110px; height: 110px; display: flex; align-items: center; justify-content: center; }
-.sidebar-header { padding: 25px 25px 10px; font-size: 11px; color: var(--slate-text); font-weight: 700; letter-spacing: 1.2px; }
-.nav-link { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #94a3b8; text-decoration: none; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; }
-.nav-link:hover { background: var(--navy-muted); color: white; }
-.nav-link.active { background: var(--navy-muted); color: var(--brand-blue); border-left-color: var(--brand-blue); }
+.login-card { 
+    background: white; padding: 50px 40px; border-radius: 12px; 
+    width: 380px; text-align: center; 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
+}
 
-/* --- MAIN CONTENT --- */
-#main-content { margin-left: 260px; padding: 0; min-height: 100vh; }
-#brand-header { background: white; padding: 25px 40px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
-.main-title { font-family: 'Montserrat'; font-size: 28px; margin: 0; letter-spacing: -0.5px; }
-.sub-title { font-size: 11px; color: var(--slate-text); text-transform: uppercase; margin: 0; font-weight: 600; }
+/* FIXED LOGO UPLOAD BOX */
+#logo-drop-zone { 
+    margin: 0 auto 30px; cursor: pointer; 
+    width: 120px; height: 120px; 
+    border: 2px dashed var(--brand-blue); 
+    background: #f0f9ff; 
+    display: flex; align-items: center; justify-content: center; 
+    border-radius: 12px; overflow: hidden; position: relative;
+}
 
-/* --- ACTIONS & TABLE --- */
-.action-strip { padding: 30px 40px; display: flex; justify-content: space-between; align-items: center; }
-#main-search { padding: 12px 20px; width: 350px; border: 1px solid var(--border-light); border-radius: 8px; font-size: 14px; }
-.btn-primary { background: var(--navy-deep); color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; transition: 0.2s; }
-.btn-primary:hover { background: var(--navy-muted); }
+#login-display-logo, .global-logo-src { 
+    width: 100% !important; 
+    height: 100% !important; 
+    object-fit: contain !important; /* This prevents the "oversized" look */
+    display: block;
+}
 
-.table-card { margin: 0 40px; background: white; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; }
-.corporate-table { width: 100%; border-collapse: collapse; }
-.corporate-table th { background: #f1f5f9; padding: 16px 20px; text-align: left; font-size: 12px; font-weight: 700; color: var(--slate-text); text-transform: uppercase; }
-.corporate-table td { padding: 18px 20px; border-top: 1px solid #f1f5f9; font-size: 14px; }
-.btn-view { background: var(--navy-deep); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-delete { color: #ef4444; background: none; border: none; cursor: pointer; margin-left: 10px; font-size: 14px; }
+/* --- SIDEBAR LOGO FIX --- */
+.logo-box-white { 
+    background: white; padding: 10px; border-radius: 12px; 
+    width: 100px; height: 100px; 
+    display: flex; align-items: center; justify-content: center; 
+    overflow: hidden; margin: 0 auto;
+}
 
-/* Modal Styles */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10001; }
-.modal-content { background: white; padding: 30px; border-radius: 16px; width: 500px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; }
-.form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-light); border-radius: 8px; box-sizing: border-box; }
+/* --- TABLE & BUTTONS --- */
+.btn-view { 
+    background: var(--navy-deep); color: white; border: none; 
+    padding: 8px 20px; border-radius: 6px; cursor: pointer; 
+    font-weight: 600; font-size: 13px; transition: 0.2s;
+}
+.btn-view:hover { background: var(--brand-blue); color: var(--navy-deep); }
+
+.type-pill {
+    font-size: 11px; font-weight: 700; color: var(--slate-text);
+    background: #f1f5f9; padding: 4px 10px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
