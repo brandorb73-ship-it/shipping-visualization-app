@@ -2,50 +2,60 @@
     --navy-deep: #0f172a;
     --navy-muted: #1e293b;
     --brand-blue: #38bdf8;
-    --slate-text: #64748b;
-    --border-light: #e2e8f0;
-    --bg-main: #f8fafc;
+    --slate: #64748b;
+    --bg: #f8fafc;
 }
 
-body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg-main); color: var(--navy-deep); }
+body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); overflow-x: hidden; }
 
-/* --- PROFESSIONAL LOGIN --- */
-#login-overlay { 
-    position: fixed; inset: 0; 
-    background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); 
-    z-index: 9999; display: flex; align-items: center; justify-content: center; 
-}
-.login-card { 
-    background: white; padding: 50px 40px; border-radius: 12px; 
-    width: 380px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); 
-}
+/* --- LOGIN --- */
+#login-overlay { position: fixed; inset: 0; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+.login-card { background: white; padding: 40px; border-radius: 16px; width: 360px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
 
-/* LOGO BOX FIXES */
+/* LOGO BOX (FIXED) */
 #logo-drop-zone, .logo-box-white { 
-    margin: 0 auto 25px; cursor: pointer; 
-    width: 120px; height: 120px; 
+    width: 110px; height: 110px; margin: 0 auto 20px; 
     border: 2px dashed var(--brand-blue); background: #f0f9ff; 
     display: flex; align-items: center; justify-content: center; 
-    border-radius: 12px; overflow: hidden; 
+    border-radius: 12px; overflow: hidden;
 }
-
-/* THE FIX FOR OVERSIZED LOGOS */
 #login-display-logo, .global-logo-src { 
-    width: 100%; height: 100%; 
-    object-fit: contain !important; /* Forces logo to fit square without stretching */
-    padding: 10px; box-sizing: border-box;
+    width: 100% !important; height: 100% !important; 
+    object-fit: contain !important; /* Forces logo to fit without distortion */
+    padding: 8px; box-sizing: border-box;
 }
 
-/* --- SIDEBAR & CONTENT --- */
+/* --- SIDEBAR --- */
 #sidebar { width: 260px; background: var(--navy-deep); color: white; height: 100vh; position: fixed; }
 .sidebar-logo-area { padding: 40px 20px; text-align: center; }
 .logo-box-white { background: white; border: none; }
+.sidebar-header { padding: 20px 25px 10px; font-size: 11px; color: var(--slate); font-weight: 700; letter-spacing: 1px; }
+.nav-link { display: flex; align-items: center; gap: 12px; padding: 14px 25px; color: #94a3b8; text-decoration: none; font-weight: 500; transition: 0.2s; border-left: 4px solid transparent; }
+.nav-link.active { background: var(--navy-muted); color: var(--brand-blue); border-left-color: var(--brand-blue); }
 
+/* --- MAIN UI --- */
 #main-content { margin-left: 260px; min-height: 100vh; }
-#brand-header { background: white; padding: 25px 40px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; }
+#brand-header { background: white; padding: 20px 40px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+.main-title { font-family: 'Montserrat'; font-size: 24px; margin: 0; }
+.sub-title { font-size: 10px; color: var(--slate); text-transform: uppercase; font-weight: 700; }
 
-/* --- BUTTONS --- */
-.btn-primary { background: var(--navy-deep); color: white; padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; }
-.btn-view { background: var(--navy-deep); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; }
-.btn-view:hover { background: var(--brand-blue); color: var(--navy-deep); }
-.btn-delete { color: #ef4444; background: none; border: none; cursor: pointer; padding: 5px; font-size: 16px; margin-left: 10px; }
+.action-strip { padding: 25px 40px; display: flex; justify-content: space-between; align-items: center; }
+#main-search { padding: 12px; width: 320px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.btn-primary { background: var(--navy-deep); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
+/* --- TABLE --- */
+.table-card { margin: 0 40px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
+.corporate-table { width: 100%; border-collapse: collapse; }
+.corporate-table th { background: #f8fafc; padding: 16px 20px; text-align: left; font-size: 12px; color: var(--slate); border-bottom: 2px solid #f1f5f9; }
+.corporate-table td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+.btn-view { background: var(--navy-deep); color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-delete { color: #ef4444; background: none; border: none; cursor: pointer; font-size: 16px; margin-left: 10px; }
+
+/* --- MODAL --- */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 11000; }
+.modal-content { background: white; padding: 35px; border-radius: 16px; width: 450px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; }
+.form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; }
+
+.viz-title-bar { background: var(--navy-deep); padding: 15px 40px; display: flex; align-items: center; gap: 20px; }
