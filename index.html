@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Shipping Dashboard</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+</head>
+<body>
+    <div id="app-header">
+        <div class="header-left">
+            <img src="https://via.placeholder.com/40" id="logo" alt="Logo">
+            <h2 id="app-title">Shipping Route Reports</h2>
+        </div>
+        <button id="add-report-btn" onclick="toggleModal(true)">+ Add New Route Report</button>
+    </div>
+
+    <div id="main-body">
+        <div id="sidebar">
+            <div class="sidebar-item">
+                <label>Search:</label>
+                <input type="text" id="search-box" placeholder="Search Exporter/Importer..." onkeyup="filterData()">
+            </div>
+            <div class="sidebar-item">
+                <label>Client:</label>
+                <select id="client-filter" onchange="filterData()">
+                    <option value="All">All Clients</option>
+                </select>
+            </div>
+            <div class="menu-list">
+                <div class="menu-link active" onclick="switchTab('flow')">Route Map</div>
+                <div class="menu-link" onclick="switchTab('cluster')">Cluster Graph</div>
+            </div>
+        </div>
+
+        <div id="map-container">
+            <div id="top-right-filters">
+                <select id="color-filter" onchange="filterData()"><option value="All">All Colors</option></select>
+                <select id="origin-filter" onchange="filterData()"><option value="All">All Origins</option></select>
+                <select id="dest-filter" onchange="filterData()"><option value="All">All Destinations</option></select>
+            </div>
+            
+            <div id="map" style="display: block;"></div>
+            <div id="cluster-graph" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div id="modal">
+            <h3>Create New Report</h3>
+            <input type="text" id="sheet-url" placeholder="Paste Google Sheet CSV URL here">
+            <div class="modal-buttons">
+                <button onclick="loadDataFromUrl()">Create Report</button>
+                <button onclick="toggleModal(false)">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
