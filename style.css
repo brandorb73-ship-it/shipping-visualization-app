@@ -80,3 +80,45 @@
     border-bottom: 1px solid #f1f5f9;
     padding: 16px;
 }
+/* Fixes the broken, unstyled login look */
+#login-overlay {
+    position: fixed;
+    inset: 0;
+    background: #0f172a; /* Dark navy background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: 'Inter', sans-serif;
+}
+
+.login-card {
+    background: white;
+    padding: 40px;
+    border-radius: 12px;
+    width: 350px;
+    text-align: center;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.login-card h2 { margin-bottom: 20px; color: #0f172a; }
+
+.login-card input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    box-sizing: border-box; /* Prevents input from overflowing */
+}
+
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background: #0f172a;
+    color: #38bdf8;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
