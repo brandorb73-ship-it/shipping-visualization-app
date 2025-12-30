@@ -2,7 +2,7 @@
    CONFIG & GLOBAL VARIABLES
    ========================================== */
 const DB_URL = "https://script.google.com/macros/s/AKfycbyRBE6_yUjzOPfLjis4OyK6XVtuWIBOmV9khY1cJ6_iQTCldqQbec7jtNmpiAL8-MI9/exec"; 
-const ACCESS_KEY = "YourSecretKey123"; // Change this to your preferred password
+const ACCESS_KEY = "Cyber$supe73r"; // CHANGE THIS to your desired password
 
 let reports = [];
 let currentRawData = [];
@@ -10,63 +10,81 @@ let mapInstance = null;
 let selectedType = 'map';
 
 /* ==========================================
-   AUTH & LOGO LOGIC
+   FAIL-SAFE AUTH & LOGO
    ========================================== */
-async function attemptLogin() {
+
+// 1. LOGIN FUNCTION
+function attemptLogin() {
     const input = document.getElementById('pass-input').value;
     const errorMsg = document.getElementById('login-error');
     
+    console.log("Attempting login with:", input);
+
     if (input === ACCESS_KEY) {
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
         sessionStorage.setItem('auth', 'true');
         errorMsg.style.display = 'none';
-        fetchReports();
+        fetchReports(); // Load data after login
     } else {
         errorMsg.style.display = 'block';
         document.getElementById('pass-input').value = "";
     }
 }
 
+// 2. LOGO UPLOAD FUNCTION
 function handleLogoUpload(input) {
     if (input.files && input.files[0]) {
+        console.log("File detected for upload...");
         const reader = new FileReader();
         reader.onload = (e) => {
             const base64Image = e.target.result;
             localStorage.setItem('bo-logo', base64Image);
             updateGlobalLogos(base64Image);
+            console.log("Logo saved to local storage.");
         };
         reader.readAsDataURL(input.files[0]);
     }
 }
 
 function updateGlobalLogos(src) {
-    document.querySelectorAll('.global-logo-src').forEach(img => {
+    // Update all images with the class 'global-logo-src'
+    const targets = document.querySelectorAll('.global-logo-src');
+    targets.forEach(img => {
         img.src = src;
         img.style.display = 'block';
     });
     
+    // Specifically update the login screen preview
     const loginImg = document.getElementById('login-display-logo');
     const placeholder = document.getElementById('login-logo-placeholder');
+    
     if (loginImg) {
         loginImg.src = src;
         loginImg.style.display = 'block';
     }
-    if (placeholder) placeholder.style.display = 'none';
+    if (placeholder) {
+        placeholder.style.display = 'none';
+    }
 }
 
-// Auto-run on page load
-window.addEventListener('DOMContentLoaded', () => {
-    const savedLogo = localStorage.getItem('bo-logo');
-    if (savedLogo) updateGlobalLogos(savedLogo);
+// 3. PERSISTENCE ON PAGE LOAD
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("App Initialized...");
     
+    // Restore Logo
+    const savedLogo = localStorage.getItem('bo-logo');
+    if (savedLogo) {
+        updateGlobalLogos(savedLogo);
+    }
+    
+    // Restore Session
     if (sessionStorage.getItem('auth') === 'true') {
         document.getElementById('login-overlay').style.display = 'none';
         document.getElementById('app-container').style.display = 'flex';
         fetchReports();
     }
 });
-
 /* ==========================================
    DATA OPERATIONS (Sheets & Table)
    ========================================== */
