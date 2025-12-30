@@ -4,33 +4,30 @@ window.DB_URL = "https://script.google.com/macros/s/AKfycbzvnTinsKASNna9T_T9ODSy
 let currentCategory = 'MAP';
 let activeMap = null;
 
-// --- LOGIN ---
-window.attemptLogin = function() {
-    const input = document.getElementById('pass-input').value;
-    if (input === window.ACCESS_KEY) {
-        document.getElementById('login-overlay').style.display = 'none';
-        document.getElementById('app-container').style.display = 'flex';
-        sessionStorage.setItem('isLoggedIn', 'true');
-        window.fetchReports();
-    }
+// --- NAVIGATION ---
+window.showPage = function(category) {
+    currentCategory = category.toUpperCase();
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.getElementById('nav-' + category).classList.add('active');
+    document.getElementById('page-list').style.display = 'block';
+    document.getElementById('page-view').style.display = 'none';
+    window.fetchReports();
 };
 
-// --- DATA PUBLISHING (VIEW LOGIC) ---
+// --- CORE VISUALIZATION ENGINE ---
 window.viewReport = async function(csvUrl, title) {
     document.getElementById('page-list').style.display = 'none';
     document.getElementById('page-view').style.display = 'block';
     document.getElementById('viewing-title').innerText = title;
 
-    // Clear previous map instance if it exists
+    const container = document.getElementById('map-element');
+    container.innerHTML = ""; // Clear for next render
     if (activeMap) { activeMap.remove(); activeMap = null; }
 
     try {
-        // 1. Fetch the actual shipment data
         const response = await fetch(csvUrl);
         const csvText = await response.text();
-        
-        // 2. Simple CSV Parse (Assumes headers: Exporter, Importer, Origin Lat, Origin Long, Dest Lat, Dest Long)
-        const rows = csvText.split('\n').slice(1).map(line => line.split(','));
+        const rows = csvText.split('\n').filter(r => r.trim() !== '').slice(1).map(line => line.split(','));
 
         if (currentCategory === 'MAP') {
             initRouteMap(rows);
@@ -38,53 +35,70 @@ window.viewReport = async function(csvUrl, title) {
             initClusterGraph(rows);
         }
     } catch (e) {
-        console.error("Failed to fetch shipment data:", e);
-        alert("Error loading CSV. Check if the link is public.");
+        console.error("Data Load Error:", e);
+        container.innerHTML = "<p style='padding:20px;'>Error: Could not load CSV. Ensure the link is public.</p>";
     }
 };
+
+// --- D3 CLUSTER GRAPH ---
+function initClusterGraph(data) {
+    const container = document.getElementById('map-element');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    const svg = d3.select("#map-element").append("svg")
+        .attr("width", width).attr("height", height);
+
+    let nodes = [];
+    let links = [];
+    let nodeSet = new Set();
+
+    data.forEach(row => {
+        const s = row[0], t = row[1];
+        if(s && t) {
+            if(!nodeSet.has(s)) { nodes.push({id: s, type: 'exporter'}); nodeSet.add(s); }
+            if(!nodeSet.has(t)) { nodes.push({id: t, type: 'importer'}); nodeSet.add(t); }
+            links.push({source: s, target: t});
+        }
+    });
+
+    const sim = d3.forceSimulation(nodes)
+        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+        .force("charge", d3.forceManyBody().strength(-150))
+        .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const link = svg.append("g").selectAll("line").data(links).enter().append("line")
+        .attr("stroke", "#cbd5e1").attr("stroke-width", 1.5);
+
+    const node = svg.append("g").selectAll("circle").data(nodes).enter().append("circle")
+        .attr("r", 7).attr("fill", d => d.type === 'exporter' ? "#38bdf8" : "#0f172a")
+        .call(d3.drag().on("start", (e, d) => {
+            if (!e.active) sim.alphaTarget(0.3).restart();
+            d.fx = d.x; d.fy = d.y;
+        }).on("drag", (e, d) => {
+            d.fx = e.x; d.fy = e.y;
+        }).on("end", (e, d) => {
+            if (!e.active) sim.alphaTarget(0);
+            d.fx = null; d.fy = null;
+        }));
+
+    node.append("title").text(d => d.id);
+
+    sim.on("tick", () => {
+        link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+        node.attr("cx", d => d.x).attr("cy", d => d.y);
+    });
+}
 
 function initRouteMap(data) {
     activeMap = L.map('map-element').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(activeMap);
-
     data.forEach(row => {
-        const [exporter, importer, oLat, oLng, dLat, dLng] = row;
-        if (!oLat || !dLat) return;
-
-        const start = [parseFloat(oLat), parseFloat(oLng)];
-        const end = [parseFloat(dLat), parseFloat(dLng)];
-
-        // Draw the line
-        L.polyline([start, end], {color: '#38bdf8', weight: 2, opacity: 0.6}).addTo(activeMap);
-        
-        // Add Marker for Destination
-        L.circleMarker(end, {radius: 4, color: '#0f172a'}).addTo(activeMap)
-            .bindPopup(`<b>To:</b> ${importer}<br><b>From:</b> ${exporter}`);
+        const [exp, imp, oLat, oLng, dLat, dLng] = row;
+        if (oLat && dLat) {
+            L.polyline([[oLat, oLng], [dLat, dLng]], {color: '#38bdf8', weight: 2}).addTo(activeMap);
+            L.circleMarker([dLat, dLng], {radius: 4, color: '#0f172a'}).addTo(activeMap).bindPopup(imp);
+        }
     });
 }
-
-// --- STANDARD REFRESH ---
-window.fetchReports = async function() {
-    if(!window.DB_URL.includes("https")) return;
-    const res = await fetch(window.DB_URL);
-    const data = await res.json();
-    const rows = data.slice(1);
-    const filtered = rows.filter(r => r[3].toUpperCase() === currentCategory);
-    
-    document.getElementById('report-list-rows').innerHTML = filtered.map(r => `
-        <tr>
-            <td><strong>${r[1]}</strong></td>
-            <td>${r[4] || 'General'}</td>
-            <td>${r[5] || ''}</td>
-            <td>${r[3]}</td>
-            <td style="text-align:right">
-                <button class="btn-view" onclick="window.viewReport('${r[2]}', '${r[1]}')">View</button>
-            </td>
-        </tr>
-    `).join('');
-};
-
-window.goBackToList = () => {
-    document.getElementById('page-view').style.display = 'none';
-    document.getElementById('page-list').style.display = 'block';
-};
