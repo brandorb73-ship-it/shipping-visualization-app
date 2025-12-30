@@ -3,7 +3,7 @@ window.DB_URL = "https://script.google.com/macros/s/AKfycbzvnTinsKASNna9T_T9ODSy
 
 let currentCategory = 'MAP';
 
-// --- FIXED LOGIN & LOGO ---
+// --- LOGIN & LOGO SCALING ---
 window.handleLogoUpload = function(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -17,35 +17,15 @@ window.handleLogoUpload = function(input) {
 };
 
 function applyLogo(src) {
-    const targets = document.querySelectorAll('.global-logo-src, #login-display-logo');
-    targets.forEach(img => {
+    document.querySelectorAll('.global-logo-src, #login-display-logo').forEach(img => {
         img.src = src;
         img.style.display = 'block';
     });
-    const placeholder = document.getElementById('login-logo-placeholder');
-    if(placeholder) placeholder.style.display = 'none';
+    if(document.getElementById('login-logo-placeholder')) 
+        document.getElementById('login-logo-placeholder').style.display = 'none';
 }
 
-// --- FIXED VIEW BUTTON LOGIC ---
-window.viewReport = function(csvUrl, title) {
-    console.log("Viewing Report:", title, "URL:", csvUrl);
-    
-    // 1. Hide list, show view
-    document.getElementById('page-list').style.display = 'none';
-    document.getElementById('page-view').style.display = 'block';
-    
-    // 2. Set title
-    document.getElementById('viewing-title').innerText = title;
-
-    // 3. Initialize Map or Cluster
-    if (currentCategory === 'MAP') {
-        initRouteMap(csvUrl);
-    } else {
-        initClusterGraph(csvUrl);
-    }
-};
-
-// --- DATA FETCHING (Ensure View button gets the right URL) ---
+// --- TABLE RENDERING & VIEW BUTTON FIX ---
 window.renderTable = function(rows) {
     const tbody = document.getElementById('report-list-rows');
     tbody.innerHTML = rows.map(r => `
@@ -53,7 +33,7 @@ window.renderTable = function(rows) {
             <td><strong>${r[1]}</strong></td>
             <td>${r[4] || 'General'}</td>
             <td>${r[5] ? new Date(r[5]).toLocaleDateString() : 'N/A'}</td>
-            <td><span class="type-pill">${r[3]}</span></td>
+            <td><span class="type-pill" style="background:#f1f5f9; padding:4px 8px; border-radius:4px; font-size:11px;">${r[3]}</span></td>
             <td style="text-align:right">
                 <button class="btn-view" onclick="viewReport('${r[2]}', '${r[1]}')">View</button>
                 <button class="btn-delete" onclick="deleteReport('${r[0]}')"><i class="fas fa-trash"></i></button>
@@ -62,8 +42,32 @@ window.renderTable = function(rows) {
     `).join('');
 };
 
-// Add this to make sure your back button works properly
+// --- NAVIGATION ---
+window.viewReport = function(csvUrl, title) {
+    document.getElementById('page-list').style.display = 'none';
+    document.getElementById('page-view').style.display = 'block';
+    document.getElementById('viewing-title').innerText = title;
+    
+    // Load the visualization
+    if(currentCategory === 'MAP') {
+        initRouteMap(csvUrl);
+    } else {
+        initClusterGraph(csvUrl);
+    }
+};
+
 window.goBackToList = function() {
     document.getElementById('page-view').style.display = 'none';
     document.getElementById('page-list').style.display = 'block';
+};
+
+// --- INITIAL LOAD ---
+window.onload = function() {
+    const savedLogo = localStorage.getItem('brand-logo');
+    if(savedLogo) applyLogo(savedLogo);
+    
+    if(sessionStorage.getItem('loggedIn') === 'true') {
+        document.getElementById('login-overlay').style.display = 'none';
+        fetchReports();
+    }
 };
