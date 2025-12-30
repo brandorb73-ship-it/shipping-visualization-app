@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandOrb | Supply Chain Intelligence</title>
+    <title>BrandOrb | Intelligence Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="style.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -29,32 +29,53 @@
     <div id="app-container" style="display:none;">
         <aside id="sidebar">
             <div class="sidebar-logo-area">
-                <div class="logo-box-white"><img class="global-logo-src" src="" style="display:none;"></div>
+                <div class="logo-box-white">
+                    <img class="global-logo-src" id="sidebar-logo" src="" style="display:none;">
+                </div>
             </div>
             <nav class="nav-menu">
                 <div class="sidebar-header">ANALYTICS</div>
-                <a href="#" class="nav-link active" id="nav-map" onclick="window.showPage('map')"><i class="fas fa-route"></i> Route Reports</a>
-                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')"><i class="fas fa-project-diagram"></i> Cluster Graphs</a>
+                <a href="#" class="nav-link active" id="nav-map" onclick="window.showPage('map')">
+                    <i class="fas fa-route"></i> Route Reports
+                </a>
+                <a href="#" class="nav-link" id="nav-cluster" onclick="window.showPage('cluster')">
+                    <i class="fas fa-project-diagram"></i> Cluster Graphs
+                </a>
             </nav>
         </aside>
 
         <main id="main-content">
             <header id="brand-header">
-                <div class="header-titles"><h1>BrandOrb</h1><p>Intelligence Dashboard</p></div>
+                <div class="header-titles">
+                    <h1>BrandOrb</h1>
+                    <p>INTELLIGENCE DASHBOARD</p>
+                </div>
                 <div class="header-actions">
-                    <select id="client-select"><option value="General">General</option></select>
-                    <button class="btn-add-client" onclick="window.addNewClient()">+</button>
+                    <select id="client-select">
+                        <option value="General">General</option>
+                    </select>
+                    <button class="btn-add-client" onclick="window.addNewClient()">
+                        <i class="fas fa-plus"></i>
+                    </button>
                 </div>
             </header>
 
             <div id="page-list" class="content-page">
                 <div class="action-strip">
-                    <input type="text" id="main-search" placeholder="Search report database..." oninput="window.filterTable()">
+                    <input type="text" id="main-search" placeholder="Search database..." oninput="window.filterTable()">
                     <button class="btn-primary" onclick="window.openModal()">+ Add New Report</button>
                 </div>
                 <div class="table-card">
                     <table class="corporate-table">
-                        <thead><tr><th>Report</th><th>Client</th><th>Date</th><th>Type</th><th style="text-align:right">Action</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Report</th>
+                                <th>Client</th>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th style="text-align:right">Action</th>
+                            </tr>
+                        </thead>
                         <tbody id="report-list-rows"></tbody>
                     </table>
                 </div>
@@ -62,28 +83,4 @@
 
             <div id="page-view" class="content-page" style="display:none;">
                 <div class="viz-title-bar">
-                    <button onclick="window.goBackToList()" class="btn-back"><i class="fas fa-arrow-left"></i> Back</button>
-                    <h2 id="viewing-title"></h2>
-                </div>
-                <div id="map-element"></div>
-            </div>
-        </main>
-    </div>
-
-    <div id="report-modal" class="modal">
-        <div class="modal-content">
-            <h3>Configure New Report</h3>
-            <div class="form-group"><label>Title</label><input type="text" id="rep-title"></div>
-            <div class="form-group"><label>CSV URL</label><input type="text" id="rep-url"></div>
-            <div class="form-group"><label>Category</label><select id="rep-type"><option value="MAP">Map</option><option value="CLUSTER">Cluster</option></select></div>
-            <div class="modal-buttons">
-                <button onclick="window.saveNewReport()" class="btn-primary">Publish</button>
-                <button onclick="window.closeModal()" class="btn-cancel">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+                    <button onclick="window.goBack
