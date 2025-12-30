@@ -1,5 +1,5 @@
 // Make sure to replace this with your actual Deployment URL from Google Sheets
-const DB_URL = "YOUR_APPS_SCRIPT_URL_HERE"; 
+const DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; 
 let reports = [];
 let selectedType = 'map';
 let mapInstance = null;
