@@ -1,67 +1,127 @@
-const DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; // Paste your Google Script Link here
-let currentType = 'map';
-let allReports = [];
-let map;
+let DB_URL = "https://script.google.com/macros/s/AKfycbwCdQomilIT71s1c6qZWY21RsoVv5ZQG37zilaSEpJQpCoWyABhHpcWroyT1qf7QMgR/exec"; // ENSURE THIS IS CORRECT
+let selectedType = 'map';
+let reports = [];
 
-// 1. LOGIN CHECK
-if(!localStorage.getItem('auth')) {
-    let pass = prompt("Enter Password:");
-    if(pass === "1234") localStorage.setItem('auth', 'true');
-    else window.location.reload();
+// Initialize
+window.onload = async () => {
+    loadSavedLogo();
+    await fetchReports();
+};
+
+function showPage(id) {
+    document.querySelectorAll('.page-content').forEach(p => p.style.display = 'none');
+    document.getElementById('page-' + id).style.display = 'block';
 }
 
-// 2. LOAD DATA FROM GOOGLE DRIVE
-async function loadReports() {
-    const res = await fetch(DB_URL);
-    const data = await res.json();
-    allReports = data.slice(1); // Remove headers
-    renderList();
+function selectType(type) {
+    selectedType = type;
+    document.getElementById('box-map').classList.toggle('active', type === 'map');
+    document.getElementById('box-cluster').classList.toggle('active', type === 'cluster');
 }
 
-function renderList() {
-    const body = document.getElementById('list-body');
-    body.innerHTML = allReports.map((r, i) => `
+// FETCH FROM GOOGLE DRIVE
+async function fetchReports() {
+    try {
+        const response = await fetch(DB_URL);
+        const data = await response.json();
+        reports = data.slice(1); // Exclude header row
+        renderTable();
+    } catch (e) {
+        console.error("Could not load from Drive. Checking local storage...");
+    }
+}
+
+function renderTable() {
+    const tbody = document.getElementById('report-list-rows');
+    tbody.innerHTML = reports.map((r, index) => `
         <tr>
-            <td>${r[1]}</td><td>${r[5]}</td><td>${r[4]}</td><td>${r[3]}</td>
+            <td>${r[1]}</td>
+            <td>${r[5]}</td>
+            <td>${r[4]}</td>
+            <td>${r[3]}</td>
             <td>
-                <button onclick="openReport(${i})">Preview</button>
-                <button onclick="downloadReport(${i})">Download</button>
+                <button onclick="previewReport(${index})">Preview</button>
+                <button onclick="deleteReport(${index})">Delete</button>
             </td>
         </tr>
     `).join('');
 }
 
-// 3. MOVING FLOW LINES
+// SAVE TO DRIVE
+async function processAndSave() {
+    const title = document.getElementById('report-name').value;
+    const url = document.getElementById('sheet-url').value;
+    const client = document.getElementById('client-select').value;
+    const date = new Date().toLocaleDateString();
+
+    const payload = {
+        target: "Reports",
+        data: [Date.now(), title, url, selectedType, client, date]
+    };
+
+    // Save to Drive
+    await fetch(DB_URL, { method: 'POST', body: JSON.stringify(payload) });
+    
+    // Refresh
+    await fetchReports();
+    showPage('list');
+}
+
+function previewReport(index) {
+    const r = reports[index];
+    const url = r[2]; // The Google Sheet URL
+    const type = r[3];
+    
+    showPage('view');
+    document.getElementById('viewing-title').innerText = r[1];
+
+    Papa.parse(url, {
+        download: true,
+        header: true,
+        complete: function(results) {
+            if(type === 'map') renderMap(results.data);
+            else renderCluster(results.data);
+        }
+    });
+}
+
 function renderMap(data) {
-    if(map) map.remove();
-    map = L.map('map').setView([20, 0], 2);
+    document.getElementById('map-element').style.display = 'block';
+    document.getElementById('cluster-element').style.display = 'none';
+    
+    let map = L.map('map-element').setView([20, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
     data.forEach(d => {
-        const start = [d['Origin latitude'], d['Origin longitude']];
-        const end = [d['Destination latitude'], d['Destination longitude']];
+        const start = [parseFloat(d['Origin latitude']), parseFloat(d['Origin longitude'])];
+        const end = [parseFloat(d['Destination latitude']), parseFloat(d['Destination longitude'])];
         
-        // Marker for both
+        if(!start[0] || !end[0]) return;
+
         L.marker(start).addTo(map).bindPopup("Exporter: " + d.Exporter);
         L.marker(end).addTo(map).bindPopup("Importer: " + d.Importer);
 
-        // Moving "Ant Path" line (Animated & Curved)
+        // MOVING CURVED LINES
         L.polyline.antPath([start, end], {
-            "paused": false, "reverse": false, "delay": 3000, "dashArray": [10, 20],
-            "weight": 3, "color": d.COLOR || "blue", "pulseColor": "#FFFFFF"
+            color: d.COLOR || 'red', 
+            pulseColor: 'white',
+            delay: 2000,
+            dashArray: [10, 20],
+            weight: 3
         }).addTo(map);
     });
 }
 
-// 4. CLUSTER GRAPH WITH LINES
+// CLUSTER LOGIC (Grouped by country)
 function renderCluster(data) {
-    document.getElementById('map').style.display = 'none';
-    const container = document.getElementById('cluster-container');
+    document.getElementById('map-element').style.display = 'none';
+    const container = document.getElementById('cluster-element');
     container.style.display = 'block';
     container.innerHTML = "";
 
-    const width = 800, height = 600;
-    const svg = d3.select("#cluster-container").append("svg").attr("width", width).attr("height", height);
+    const width = container.clientWidth || 800;
+    const height = 600;
+    const svg = d3.select("#cluster-element").append("svg").attr("width", width).attr("height", height);
 
     let nodes = [], links = [];
     data.forEach(d => {
@@ -71,21 +131,21 @@ function renderCluster(data) {
     });
 
     const simulation = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id).distance(100))
-        .force("charge", d3.forceManyBody().strength(-200))
-        .force("center", d3.forceCenter(width/2, height/2));
+        .force("link", d3.forceLink(links).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-300))
+        .force("center", d3.forceCenter(width / 2, height / 2));
 
-    // Draw connecting lines
     const link = svg.append("g").selectAll("line").data(links).enter().append("line")
-        .attr("stroke", "#999").attr("stroke-width", 2);
+        .attr("stroke", "#bbb").attr("stroke-width", 2);
 
-    // Draw circles
     const node = svg.append("g").selectAll("circle").data(nodes).enter().append("circle")
-        .attr("r", 12)
-        .attr("fill", d => d.type === 'Exp' ? '#ff4444' : '#4444ff') // Red for Exp, Blue for Imp
-        .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
+        .attr("r", 15)
+        .attr("fill", d => d.type === 'Exp' ? '#ff6b6b' : '#4facfe')
+        .call(d3.drag().on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+                      .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+                      .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
 
-    node.append("title").text(d => `${d.id} (${d.country})`);
+    node.append("title").text(d => d.id + " (" + d.country + ")");
 
     simulation.on("tick", () => {
         link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
@@ -94,34 +154,20 @@ function renderCluster(data) {
     });
 }
 
-// 5. SAVE TO DRIVE
-async function saveToDrive() {
-    const reportData = {
-        target: "Reports",
-        data: [Date.now(), document.getElementById('new-title').value, document.getElementById('new-url').value, currentType, "General", new Date().toLocaleDateString()]
-    };
-    await fetch(DB_URL, { method: 'POST', body: JSON.stringify(reportData) });
-    alert("Saved to Google Drive!");
-    loadReports();
-    showSection('list');
-}
-
-// Logo Persistence
-function uploadLogo(e) {
+function handleLogo(e) {
     const reader = new FileReader();
     reader.onload = () => {
-        localStorage.setItem('userLogo', reader.result);
-        document.getElementById('logo-img').src = reader.result;
+        localStorage.setItem('savedLogo', reader.result);
+        loadSavedLogo();
     };
     reader.readAsDataURL(e.target.files[0]);
 }
 
-window.onload = () => {
-    if(localStorage.getItem('userLogo')) document.getElementById('logo-img').src = localStorage.getItem('userLogo');
-    loadReports();
-};
-
-function showSection(s) {
-    document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-    document.getElementById('section-'+s).style.display = 'block';
+function loadSavedLogo() {
+    const data = localStorage.getItem('savedLogo');
+    if(data) {
+        document.getElementById('user-logo').src = data;
+        document.getElementById('user-logo').style.display = 'block';
+        document.getElementById('logo-placeholder').style.display = 'none';
+    }
 }
