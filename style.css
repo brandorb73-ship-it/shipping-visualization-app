@@ -1,33 +1,38 @@
-:root {
-    --navy: #0f172a;
-    --brand-blue: #38bdf8;
-    --bg: #f8fafc;
-}
+/* Core Layout */
+body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; background: #0f172a; }
+#app-container { display: flex; width: 100vw; height: 100vh; background: #f8fafc; }
 
-body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: 'Inter', sans-serif; }
+/* Sidebar stays fixed */
+#sidebar { width: 260px; background: #0f172a; flex-shrink: 0; color: white; display: flex; flex-direction: column; }
+#main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* Layout & Sidebar */
-#app-container { display: flex; width: 100vw; height: 100vh; }
-#sidebar { width: 260px; background: var(--navy); color: white; flex-shrink: 0; }
-#main-content { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); overflow-y: auto; }
-
-/* Header & Top Right Buttons */
+/* Header Actions to Top Right */
 #brand-header { 
     display: flex; justify-content: space-between; align-items: center; 
     padding: 20px 40px; background: white; border-bottom: 1px solid #e2e8f0; 
 }
-.header-actions { display: flex; align-items: center; gap: 12px; }
+.header-actions { display: flex; align-items: center; gap: 15px; }
 
-/* Logo Scaling Fix */
-.logo-box-white { 
-    width: 110px; height: 110px; background: white; border-radius: 12px; 
-    display: flex; align-items: center; justify-content: center; margin: 20px auto;
+/* Login Box Professional Styling */
+#login-overlay { 
+    position: fixed; inset: 0; background: #0f172a; 
+    display: flex; align-items: center; justify-content: center; z-index: 9999; 
 }
-.global-logo-src { max-width: 90%; max-height: 90%; object-fit: contain; }
+.login-card { 
+    background: white; padding: 40px; border-radius: 12px; width: 360px; 
+    text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+}
+.btn-login { 
+    width: 100%; padding: 12px; background: #0f172a; color: #38bdf8; 
+    border: none; border-radius: 6px; font-weight: bold; cursor: pointer; 
+}
 
-/* Buttons */
-.btn-primary-add { background: var(--navy); color: var(--brand-blue); border: 1px solid var(--brand-blue); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
-.btn-icon { background: white; color: var(--navy); border: 1px solid #cbd5e1; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; }
+/* Modal Overlay Fix */
+.modal { 
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7); 
+    display: none; align-items: center; justify-content: center; z-index: 10000; 
+}
+.modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; }
 
-/* Visualization Area */
-#map-element { width: 100%; height: calc(100vh - 120px); background: white; position: relative; }
+/* Visualization Height */
+#map-element { width: 100%; height: calc(100vh - 120px); background: #fff; }
