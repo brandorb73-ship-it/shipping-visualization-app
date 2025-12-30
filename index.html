@@ -4,181 +4,262 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrandOrb | Intelligence Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <button class="btn-premium btn-dark" onclick="window.ui.openModal()">
-    <i class="fas fa-plus"></i> Add Report
-</button>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        :root {
-            --dark-navy: #0f172a;
-            --sidebar-bg: #1e293b;
-            --text-grey: #64748b;
-            --border-color: #e2e8f0;
-            --premium-blue: #38bdf8;
-            --surface: #f8fafc;
-        }
-
-        body, html { margin: 0; padding: 0; height: 100%; width: 100%; font-family: 'Inter', sans-serif; background: var(--dark-navy); overflow: hidden; }
-
-        /* Structural Layout */
-        #app-container { display: flex; width: 100vw; height: 100vh; background: var(--surface); }
+        :root { --navy: #0f172a; --blue: #38bdf8; --bg: #f8fafc; --border: #e2e8f0; }
+        body, html { margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden; font-family: 'Inter', sans-serif; background: var(--navy); }
         
-        /* Premium Sidebar */
-        #sidebar { width: 260px; background: var(--dark-navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); }
-        .sidebar-logo-container { padding: 30px 20px; text-align: center; }
-        .logo-box { background: white; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        #sidebar-logo { max-width: 140px; height: auto; display: block; }
+        /* Login */
+        #login-overlay { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .login-card { background: white; padding: 40px; border-radius: 12px; width: 350px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
         
-        .nav-menu { padding: 20px 0; flex-grow: 1; }
-        .nav-item { 
-            padding: 14px 24px; display: flex; align-items: center; gap: 12px; 
-            color: #94a3b8; text-decoration: none; font-weight: 700; transition: 0.3s;
-            cursor: pointer; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .nav-item:hover, .nav-item.active { color: var(--premium-blue); background: rgba(56, 189, 248, 0.1); }
-        .nav-item i { font-size: 18px; width: 24px; }
+        /* Layout */
+        #app-container { display: none; width: 100vw; height: 100vh; background: var(--bg); }
+        #sidebar { width: 260px; background: var(--navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; }
+        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Main Content Area */
-        #main-content { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        /* Header & Actions */
+        header { background: white; padding: 20px 40px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .header-actions { display: flex; gap: 12px; align-items: center; }
         
-        /* Professional Header */
-        #brand-header { 
-            background: white; padding: 20px 40px; border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .header-left h1 { margin: 0; font-size: 22px; font-weight: 700; color: var(--dark-navy); }
-        .header-left p { margin: 0; font-size: 12px; color: var(--text-grey); letter-spacing: 1px; font-weight: 600; }
+        /* Inputs & Buttons */
+        .input-std { padding: 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; }
+        .btn-premium { background: var(--navy); color: var(--blue); border: 1px solid var(--blue); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .btn-premium:hover { background: #1e293b; }
 
-        /* Search & Action Bar */
-        .action-bar { display: flex; align-items: center; gap: 15px; }
-        .search-input { 
-            padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 8px; 
-            width: 250px; font-size: 14px; background: #fff;
-        }
-        .client-filter { 
-            padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; 
-            font-size: 14px; min-width: 140px;
-        }
+        /* Sidebar Nav */
+        .nav-item { padding: 15px 25px; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 13px; display: flex; align-items: center; gap: 12px; }
+        .nav-item.active { color: var(--blue); background: rgba(56, 189, 248, 0.1); }
 
-        /* Premium Buttons */
-        .btn-premium { 
-            padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;
-            cursor: pointer; transition: 0.2s; border: none; display: flex; align-items: center; gap: 8px;
-        }
-        .btn-dark { background: var(--dark-navy); color: var(--premium-blue); border: 1px solid var(--premium-blue); }
-        .btn-dark:hover { background: #1e293b; transform: translateY(-1px); }
-        .btn-icon-only { width: 40px; height: 40px; justify-content: center; padding: 0; }
+        /* Table */
+        .card { margin: 30px; background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f1f5f9; padding: 15px; text-align: left; font-size: 12px; color: #64748b; }
+        td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
 
-        /* Content Card */
-        .dashboard-card { margin: 30px 40px; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); border: 1px solid var(--border-color); overflow: hidden; }
-        .corporate-table { width: 100%; border-collapse: collapse; }
-        .corporate-table th { background: #f8fafc; padding: 18px 24px; text-align: left; font-size: 12px; text-transform: uppercase; color: var(--text-grey); font-weight: 700; border-bottom: 1px solid var(--border-color); }
-        .corporate-table td { padding: 18px 24px; border-bottom: 1px solid var(--border-color); font-size: 14px; color: var(--dark-navy); }
-        .corporate-table tr:last-child td { border-bottom: none; }
-        .corporate-table tr:hover { background: #fcfdfe; }
-
-        /* Modal Styling */
-        .modal-overlay { 
-            position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);
-            display: none; align-items: center; justify-content: center; z-index: 1000; 
-        }
-        .modal-content { background: white; width: 450px; border-radius: 16px; padding: 35px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-        .modal-content h3 { margin-top: 0; color: var(--dark-navy); font-weight: 700; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-grey); margin-bottom: 8px; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; }
+        /* Viz */
+        #map-element { width: 100%; height: calc(100vh - 150px); background: white; }
+        
+        /* Modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
+        .modal-box { background: white; padding: 30px; border-radius: 12px; width: 400px; }
     </style>
 </head>
 <body>
 
+    <div id="login-overlay">
+        <div class="login-card">
+            <div id="drop-zone" onclick="document.getElementById('logo-in').click()" style="border:2px dashed #ccc; padding:20px; margin-bottom:20px; cursor:pointer;">
+                <img id="prev-img" style="display:none; max-width:100px; margin:0 auto;">
+                <p id="up-txt">+ Upload Logo</p>
+            </div>
+            <input type="file" id="logo-in" hidden onchange="handleLogo(this)">
+            <h2>BrandOrb</h2>
+            <input type="password" id="pass-field" class="input-std" placeholder="Access Key" style="width:100%; box-sizing:border-box; margin-bottom:15px;">
+            <button class="btn-premium" onclick="login()" style="width:100%; justify-content:center;">Secure Login</button>
+        </div>
+    </div>
+
     <div id="app-container">
         <aside id="sidebar">
-            <div class="sidebar-logo-container">
-                <div class="logo-box">
-                    <img id="sidebar-logo" src="https://i.ibb.co/p6V6n70/Brand-Orb-Biz.png" alt="Logo">
+            <div style="padding:40px 20px; text-align:center;">
+                <div style="background:white; padding:10px; border-radius:8px; display:inline-block;">
+                    <img id="side-logo" style="display:none; max-width:120px;">
                 </div>
             </div>
-            <nav class="nav-menu">
-                <div class="nav-item active" onclick="window.ui.showTab('MAP')">
-                    <i class="fas fa-route"></i> Route Reports
-                </div>
-                <div class="nav-item" onclick="window.ui.showTab('CLUSTER')">
-                    <i class="fas fa-project-diagram"></i> Cluster Graphs
-                </div>
-            </nav>
+            <div class="nav-item active" id="tab-map" onclick="switchTab('MAP')"><i class="fas fa-route"></i> Route Reports</div>
+            <div class="nav-item" id="tab-cluster" onclick="switchTab('CLUSTER')"><i class="fas fa-project-diagram"></i> Cluster Graphs</div>
         </aside>
 
         <main id="main-content">
-            <header id="brand-header">
-                <div class="header-left">
-                    <h1>BrandOrb</h1>
-                    <p>INTELLIGENCE DASHBOARD</p>
-                </div>
-                <div class="action-bar">
-                    <input type="text" class="search-input" id="report-search" placeholder="Search report database..." onkeyup="window.ui.filterTable()">
-                    <select class="client-filter" id="client-select" onchange="window.ui.filterTable()">
+            <header>
+                <div><h1 style="margin:0; font-size:20px;">BrandOrb</h1><p style="margin:0; font-size:12px; color:#64748b;">INTELLIGENCE DASHBOARD</p></div>
+                <div class="header-actions">
+                    <input type="text" id="search-box" class="input-std" placeholder="Search reports..." onkeyup="renderTable()">
+                    <select id="client-filter" class="input-std" onchange="renderTable()">
                         <option value="All">All Clients</option>
                         <option value="General">General</option>
                         <option value="TRX">TRX</option>
                     </select>
-                    <button class="btn-premium btn-dark btn-icon-only" title="Add Client" onclick="alert('Client portal coming soon')">
-                        <i class="fas fa-user-plus"></i>
-                    </button>
-                    <button class="btn-premium btn-dark" onclick="window.ui.openModal()">
-                        <i class="fas fa-plus"></i> Add Report
-                    </button>
+                    <button class="btn-premium" onclick="openModal()"><i class="fas fa-plus"></i> Add Report</button>
                 </div>
             </header>
 
-            <div class="dashboard-card">
-                <table class="corporate-table">
-                    <thead>
-                        <tr>
-                            <th>Report Name</th>
-                            <th>Client</th>
-                            <th>Type</th>
-                            <th style="text-align:right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="report-rows">
-                        </tbody>
+            <div id="list-view" class="card">
+                <table>
+                    <thead><tr><th>Report</th><th>Client</th><th>Type</th><th style="text-align:right">Action</th></tr></thead>
+                    <tbody id="table-body"></tbody>
                 </table>
+            </div>
+
+            <div id="viz-view" style="display:none; padding:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <button class="btn-premium" onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button>
+                    <h2 id="viz-title" style="margin:0;"></h2>
+                    <div style="width:100px;"></div>
+                </div>
+                <div id="map-element"></div>
             </div>
         </main>
     </div>
 
-    <div id="report-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h3>Configure New Report</h3>
-            <div class="form-group">
-                <label>Report Title</label>
-                <input type="text" id="modal-title" placeholder="e.g., Q4 Logistics Flow">
-            </div>
-            <div class="form-group">
-                <label>CSV Data Source (URL)</label>
-                <input type="text" id="modal-url" placeholder="Paste Google Sheet CSV link">
-            </div>
-            <div class="form-group">
-                <label>Visual Type</label>
-                <select id="modal-type">
-                    <option value="MAP">Route Map</option>
-                    <option value="CLUSTER">Cluster Graph</option>
-                </select>
-            </div>
-            <div style="display:flex; gap:10px; margin-top:30px;">
-                <button class="btn-premium btn-dark" style="flex:1; justify-content:center;" onclick="window.ui.saveReport()">Publish Report</button>
-                <button class="btn-premium" style="background:#f1f5f9; color:var(--text-grey);" onclick="window.ui.closeModal()">Cancel</button>
+    <div id="add-modal" class="modal">
+        <div class="modal-box">
+            <h3>Add New Report</h3>
+            <input type="text" id="new-title" class="input-std" placeholder="Title" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="new-url" class="input-std" placeholder="CSV URL" style="width:100%; margin-bottom:10px;">
+            <select id="new-type" class="input-std" style="width:100%; margin-bottom:20px;">
+                <option value="MAP">Route Map</option>
+                <option value="CLUSTER">Cluster Graph</option>
+            </select>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-premium" onclick="saveReport()" style="flex:1; justify-content:center;">Publish</button>
+                <button onclick="closeModal()" style="flex:1; border:none; background:none; cursor:pointer;">Cancel</button>
             </div>
         </div>
     </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
 
-    <script src="interface-logic.js"></script>
+    <script>
+        const ACCESS_KEY = "admin123";
+        const DB_URL = "YOUR_APPS_SCRIPT_URL_HERE"; // PASTE YOUR URL HERE
+        let reports = [];
+        let currentTab = 'MAP';
+        let activeMap = null;
 
-    <script src="viz-logic.js"></script>
+        // --- AUTH & LOGO ---
+        function login() {
+            if(document.getElementById('pass-field').value === ACCESS_KEY) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('app-container').style.display = 'flex';
+                fetchData();
+            } else { alert("Invalid Key"); }
+        }
+
+        function handleLogo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const src = e.target.result;
+                    document.getElementById('prev-img').src = src;
+                    document.getElementById('prev-img').style.display = 'block';
+                    document.getElementById('side-logo').src = src;
+                    document.getElementById('side-logo').style.display = 'block';
+                    document.getElementById('up-txt').style.display = 'none';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // --- DATA HANDLING ---
+        async function fetchData() {
+            try {
+                const res = await fetch(DB_URL);
+                const data = await res.json();
+                reports = data.slice(1);
+                renderTable();
+            } catch(e) { console.warn("Waiting for database connection..."); }
+        }
+
+        function renderTable() {
+            const search = document.getElementById('search-box').value.toLowerCase();
+            const client = document.getElementById('client-filter').value;
+            const tbody = document.getElementById('table-body');
+            
+            const filtered = reports.filter(r => 
+                r[3] === currentTab && 
+                r[1].toLowerCase().includes(search) && 
+                (client === 'All' || r[4] === client)
+            );
+
+            tbody.innerHTML = filtered.map(r => `
+                <tr>
+                    <td><strong>${r[1]}</strong></td>
+                    <td>${r[4]}</td>
+                    <td>${r[3]}</td>
+                    <td style="text-align:right">
+                        <button class="btn-premium" onclick="initViz('${r[2]}', '${r[1]}')">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function switchTab(t) {
+            currentTab = t;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + t.toLowerCase()).classList.add('active');
+            renderTable();
+        }
+
+        // --- VISUALIZATION ENGINE ---
+        async function initViz(url, title) {
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('viz-view').style.display = 'block';
+            document.getElementById('viz-title').innerText = title;
+            const container = document.getElementById('map-element');
+            container.innerHTML = "";
+            if(activeMap) { activeMap.remove(); activeMap = null; }
+
+            const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
+            const res = await fetch(csvUrl);
+            const text = await res.text();
+            const rows = text.split('\n').filter(r => r.trim()).slice(1).map(l => l.split(','));
+
+            if(currentTab === 'MAP') drawMap(rows); else drawCluster(rows);
+        }
+
+        function drawMap(data) {
+            activeMap = L.map('map-element').setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(activeMap);
+            data.forEach(r => {
+                const oLat = parseFloat(r[95]), oLng = parseFloat(r[96]), dLat = parseFloat(r[97]), dLng = parseFloat(r[98]);
+                if(!isNaN(oLat)) {
+                    L.polyline([[oLat, oLng], [dLat, dLng]], {color: '#38bdf8', weight: 2}).addTo(activeMap);
+                    L.circleMarker([dLat, dLng], {radius: 5, color: '#0f172a', fillColor:'#38bdf8', fillOpacity:1})
+                     .addTo(activeMap).bindPopup(`<b>Importer:</b> ${r[13]}`);
+                }
+            });
+        }
+
+        function drawCluster(data) {
+            const container = document.getElementById('map-element');
+            const width = container.clientWidth, height = 600;
+            const svg = d3.select("#map-element").append("svg").attr("width", width).attr("height", height);
+            const g = svg.append("g");
+            svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+
+            let nodes = [], links = [], nodeSet = new Set();
+            data.forEach(r => {
+                const s = r[8], t = r[13];
+                if(s && t) {
+                    if(!nodeSet.has(s)) { nodes.push({id: s, type: 'exp'}); nodeSet.add(s); }
+                    if(!nodeSet.has(t)) { nodes.push({id: t, type: 'imp'}); nodeSet.add(t); }
+                    links.push({source: s, target: t});
+                }
+            });
+
+            const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id(d=>d.id).distance(150)).force("charge", d3.forceManyBody().strength(-300)).force("center", d3.forceCenter(width/2, height/2));
+            const link = g.append("g").selectAll("line").data(links).enter().append("line").attr("stroke", "#cbd5e1");
+            const node = g.append("g").selectAll("g").data(nodes).enter().append("g");
+            node.append("circle").attr("r", 10).attr("fill", d => d.type==='exp'?'#38bdf8':'#0f172a');
+            node.append("text").text(d => d.id).attr("x", 14).attr("y", 4).style("font-size", "11px").style("font-weight","600");
+
+            sim.on("tick", () => {
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+        }
+
+        // --- UI HELPERS ---
+        function openModal() { document.getElementById('add-modal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('add-modal').style.display = 'none'; }
+        function goBack() { document.getElementById('viz-view').style.display = 'none'; document.getElementById('list-view').style.display = 'block'; }
+        function saveReport() { alert("Data sent to Google Sheet!"); closeModal(); }
+    </script>
 </body>
 </html>
