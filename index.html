@@ -39,6 +39,7 @@
             <h2>BrandOrb</h2>
             <input type="password" id="pass" class="input-s" placeholder="Access Key" style="width:100%; margin-bottom:15px; box-sizing:border-box;">
             <button class="btn-p" onclick="doLogin()" style="width:100%; justify-content:center;">Enter Dashboard</button>
+            <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Change Key</button>
         </div>
     </div>
 
@@ -130,14 +131,37 @@
         let clients = JSON.parse(localStorage.getItem('bo_clients')) || ["General", "TRX"];
         let tab = 'MAP', LMap = null, rawData = [];
 
-        function doLogin() {
-            if(document.getElementById('pass').value === KEY) {
-                document.getElementById('login-scr').style.display = 'none';
-                document.getElementById('app-container').style.display = 'flex';
-                updateClientDropdowns();
-                drawTable();
-            } else alert("Invalid Key");
+        // Initialize or fetch the password
+let currentKey = localStorage.getItem('bo_key') || "admin123";
+
+function doLogin() {
+    const input = document.getElementById('pass').value;
+    if(input === currentKey) {
+        document.getElementById('login-scr').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        updateClientDropdowns();
+        drawTable();
+    } else {
+        alert("Invalid Key");
+    }
+}
+
+function changePass() {
+    const old = prompt("Enter current Access Key:");
+    if(old === currentKey) {
+        const newK = prompt("Enter NEW Access Key:");
+        if(newK && newK.length > 3) {
+            currentKey = newK;
+            localStorage.setItem('bo_key', newK);
+            alert("Key updated successfully!");
+        } else {
+            alert("Key too short!");
         }
+    } else {
+        alert("Incorrect current key.");
+    }
+}
+
 
         function updateClientDropdowns() {
             const options = clients.map(c => `<option value="${c}">${c}</option>`).join('');
