@@ -1,9 +1,21 @@
 /**
- * BRANDORB VISUALS ENGINE
+ * BRANDORB VISUALS ENGINE - FINAL REVISION
  */
 
+// PDF DOWNLOAD FUNCTION
+window.downloadPDF = function() {
+    const element = document.getElementById('map-frame');
+    html2canvas(element, { useCORS: true, allowTaint: true }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `BrandOrb_Intelligence_Report_${Date.now()}.png`;
+        link.href = imgData;
+        link.click();
+    });
+};
+
 window.populateFilters = function() {
-    if (!window.rawData || window.rawData.length < 1) return;
+    if (!window.rawData) return;
     const headers = window.rawData[0];
     const data = window.rawData.slice(1);
 
@@ -22,22 +34,26 @@ window.populateFilters = function() {
 
 window.recomputeViz = function() {
     const search = document.getElementById('ent-search').value.toLowerCase();
+    const typeF = document.getElementById('entity-type-filter').value;
     const origF = document.getElementById('orig-filter').value;
     const destF = document.getElementById('dest-filter').value;
     const headers = window.rawData[0];
     const idx = (n) => headers.indexOf(n);
 
-    // Grouping for Map Arcs (one arc per pair with multi-shipment popup)
     const groupedData = {};
     window.rawData.slice(1).forEach(r => {
         const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}`;
-        const searchMatch = r[idx("Exporter")].toLowerCase().includes(search) || 
-                            r[idx("Importer")].toLowerCase().includes(search) ||
-                            r[idx("PRODUCT")].toLowerCase().includes(search);
+        
+        // Entity Type Filter Logic
+        let typeMatch = true;
+        if(typeF === "Exporter") typeMatch = r[idx("Exporter")].toLowerCase().includes(search);
+        else if(typeF === "Importer") typeMatch = r[idx("Importer")].toLowerCase().includes(search);
+        else typeMatch = r[idx("Exporter")].toLowerCase().includes(search) || r[idx("Importer")].toLowerCase().includes(search) || r[idx("PRODUCT")].toLowerCase().includes(search);
+
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
         const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
 
-        if (searchMatch && oMatch && dMatch) {
+        if (typeMatch && oMatch && dMatch) {
             if (!groupedData[key]) groupedData[key] = [];
             groupedData[key].push(r);
         }
@@ -52,7 +68,6 @@ window.recomputeViz = function() {
 };
 
 window.drawMap = function(groupedShipments, idx) {
-    // LIGHT THEME MAP
     window.LMap = L.map('map-frame').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
@@ -62,42 +77,26 @@ window.drawMap = function(groupedShipments, idx) {
         const lat2 = parseFloat(first[idx("Destination latitude")]), lng2 = parseFloat(first[idx("Destination longitude")]);
 
         if(!isNaN(lat1) && !isNaN(lat2)) {
-            // CURVED ARCS
-            const latlngs = [[lat1, lng1], [lat2, lng2]];
-            const offsetX = lng2 - lng1, offsetY = lat2 - lat1;
-            const r = Math.sqrt(Math.pow(offsetX, 2) + Math.pow(offsetY, 2));
-            const theta = Math.atan2(offsetY, offsetX);
-            const thetaOffset = 0.3; // Curvature amount
-            const controlPoint = [
-                lat1 + (r/2) * Math.sin(theta + thetaOffset),
-                lng1 + (r/2) * Math.cos(theta + thetaOffset)
-            ];
-
-            const path = L.curve(['M', [lat1, lng1], 'Q', controlPoint, [lat2, lng2]], {
+            // FIX: Leaflet.curve implementation
+            const path = L.curve(['M', [lat1, lng1], 'Q', [(lat1+lat2)/2 + 5, (lng1+lng2)/2 + 5], [lat2, lng2]], {
                 color: first[idx("COLOR")] || '#0ea5e9', weight: 3, fill: false
             }).addTo(window.LMap);
 
-            // Detailed Multi-Shipment Popup
             const shipmentHTML = shipments.map(s => `
-                <div style="border-top:1px solid #ddd; padding-top:5px; margin-top:5px; font-size:11px;">
-                    <b>Date:</b> ${s[idx("Date")]}<br>
+                <div style="border-top:1px solid #ddd; margin-top:5px; padding-top:5px; font-size:11px;">
                     <b>Product:</b> ${s[idx("PRODUCT")]}<br>
-                    <b>Transport:</b> ${s[idx("Mode of Transport")]}
+                    <b>Qty:</b> ${s[idx("Quantity")]} | <b>Val:</b> $${s[idx("Value(USD)")]}<br>
+                    <b>Date:</b> ${s[idx("Date")]}
                 </div>`).join('');
 
-            path.bindPopup(`
-                <div style="max-height:250px; overflow-y:auto;">
-                    <strong style="color:#0ea5e9">${first[idx("Exporter")]}</strong> (${first[idx("Origin Country")]})<br>
-                    <i class="fas fa-long-arrow-alt-right"></i> <strong style="color:#f43f5e">${first[idx("Importer")]}</strong> (${first[idx("Destination Country")]})
-                    ${shipmentHTML}
-                </div>
-            `);
+            path.bindPopup(`<b>${first[idx("Exporter")]}</b> (${first[idx("Origin Country")]})<br>→ <b>${first[idx("Importer")]}</b><br>${shipmentHTML}`);
         }
     });
 };
 
 window.drawCluster = function(data, idx, searchTerm) {
     const frame = document.getElementById('map-frame');
+    frame.style.background = "#f1f5f9"; // Light Grey Background
     const width = frame.clientWidth, height = frame.clientHeight;
     const svg = d3.select("#map-frame").append("svg").attr("width", "100%").attr("height", "100%");
     const g = svg.append("g");
@@ -118,23 +117,26 @@ window.drawCluster = function(data, idx, searchTerm) {
         links.push({source: imp, target: dC, type: 'loc'});
     });
 
-    const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id(d => d.id).distance(120)).force("charge", d3.forceManyBody().strength(-300)).force("center", d3.forceCenter(width/2, height/2));
+    const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id(d => d.id).distance(130)).force("charge", d3.forceManyBody().strength(-400)).force("center", d3.forceCenter(width/2, height/2));
 
     const link = g.append("g").selectAll("line").data(links).enter().append("line")
-        .attr("stroke", d => d.type === 'loc' ? "#cbd5e1" : "#334155")
-        .attr("stroke-width", d => d.type === 'loc' ? 1 : 2.5)
-        .attr("stroke-opacity", 0.8)
+        .attr("stroke", "#334155").attr("stroke-width", 2.5).attr("stroke-opacity", 0.9)
         .on("click", (e, d) => {
-            if(d.data) alert(`Trade Info:\nProduct: ${d.data[idx("PRODUCT")]}\nDate: ${d.data[idx("Date")]}\nValue: $${d.data[idx("Value(USD)")]}`);
+            if(d.data) alert(`SHIPMENT INFO:\nProduct: ${d.data[idx("PRODUCT")]}\nQty: ${d.data[idx("Quantity")]}\nValue: $${d.data[idx("Value(USD)")]}\nTransport: ${d.data[idx("Mode of Transport")]}`);
         });
 
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g").call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y}).on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
 
-    node.append("circle").attr("r", d => d.type === 'country' ? 20 : 12)
-        .attr("fill", d => d.type === 'country' ? '#94a3b8' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'))
+    // Country Node Icon (Globe) vs Entity Node (Circle)
+    node.append("circle").attr("r", d => d.type === 'country' ? 22 : 14)
+        .attr("fill", d => d.type === 'country' ? '#475569' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'))
         .attr("stroke", "#fff").attr("stroke-width", 2);
 
-    node.append("text").text(d => d.id).attr("y", 28).attr("text-anchor", "middle").attr("fill", "#1e293b").style("font-size", "10px").style("font-weight", "bold");
+    node.append("text")
+        .text(d => d.type === 'country' ? "🌐 " + d.id : d.id)
+        .attr("y", 32).attr("text-anchor", "middle")
+        .attr("fill", "#0f172a") // Dark labels for visibility
+        .style("font-size", "11px").style("font-weight", "800");
 
     sim.on("tick", () => { link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y); node.attr("transform", d=>`translate(${d.x},${d.y})`); });
 };
