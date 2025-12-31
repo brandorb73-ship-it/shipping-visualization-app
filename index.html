@@ -26,8 +26,13 @@
         #viz-container { display: none; flex-direction: column; height: 100%; width: 100%; }
         #map-frame { flex-grow: 1; background: #f1f5f9; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .popup-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 10px; }
-        .popup-table th, .popup-table td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+        
+        /* Fixed Popup Table Width and Scroll */
+        .popup-table-container { max-width: 550px; max-height: 300px; overflow-x: auto; overflow-y: auto; }
+        .popup-table { width: 100%; min-width: 550px; font-size: 11px; border-collapse: collapse; margin-top: 10px; background: white; }
+        .popup-table th, .popup-table td { border: 1px solid #e2e8f0; padding: 6px; text-align: left; white-space: nowrap; }
+        .popup-table th { background: #f8fafc; font-weight: bold; }
+        .btn-delete { color: #ef4444; border: none; background: none; cursor: pointer; padding: 5px; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -52,7 +57,7 @@
                 <div class="header-actions">
                     <button class="btn-p" onclick="openClientMod()"><i class="fas fa-user-plus"></i> Add Client</button>
                     <button class="btn-p" onclick="openMod()"><i class="fas fa-plus"></i> Add Report</button>
-                    <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Change Key</button>
+                    <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Key</button>
                 </div>
             </header>
 
@@ -68,7 +73,7 @@
 
             <div id="list-view" class="card">
                 <table>
-                    <thead><tr><th>Name</th><th>Client</th><th>Type</th><th>Action</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Client</th><th>Type</th><th style="text-align:right">Action</th></tr></thead>
                     <tbody id="rep-rows"></tbody>
                 </table>
             </div>
@@ -78,15 +83,18 @@
 
     <div id="add-modal" class="modal">
         <div style="background:white; padding:30px; border-radius:8px; width:400px;">
-            <h3>New Report</h3>
+            <h3>New Intelligence Report</h3>
             <input type="text" id="m-title" class="input-s" placeholder="Title" style="width:100%; margin-bottom:10px;">
-            <input type="text" id="m-url" class="input-s" placeholder="CSV URL" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="m-url" class="input-s" placeholder="Google Sheet CSV URL" style="width:100%; margin-bottom:10px;">
             <select id="m-client" class="input-s" style="width:100%; margin-bottom:10px;"></select>
             <select id="m-type" class="input-s" style="width:100%; margin-bottom:20px;">
                 <option value="MAP">Route Map</option>
                 <option value="CLUSTER">Cluster Graph</option>
             </select>
-            <button class="btn-p" onclick="publishReport()" style="width:100%; justify-content:center;">Publish</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-p" onclick="publishReport()" style="flex:1; justify-content:center;">Publish</button>
+                <button onclick="document.getElementById('add-modal').style.display='none'" style="flex:1; border:none; background:none; cursor:pointer;">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -124,15 +132,32 @@
             document.getElementById('m-client').innerHTML = clients.map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
+        function deleteReport(id) {
+            if(confirm("Delete this report permanently?")) {
+                reports = reports.filter(r => r.id !== id);
+                localStorage.setItem('bo_reports', JSON.stringify(reports));
+                drawTable();
+            }
+        }
+
         function publishReport() {
             const r = { id: Date.now(), name: document.getElementById('m-title').value, url: document.getElementById('m-url').value, type: document.getElementById('m-type').value, client: document.getElementById('m-client').value };
-            reports.push(r); localStorage.setItem('bo_reports', JSON.stringify(reports)); drawTable(); document.getElementById('add-modal').style.display='none';
+            if(!r.name || !r.url) return alert("Fill all fields");
+            reports.push(r); localStorage.setItem('bo_reports', JSON.stringify(reports)); 
+            drawTable(); document.getElementById('add-modal').style.display='none';
         }
 
         function drawTable() {
             document.getElementById('rep-rows').innerHTML = reports.filter(r => r.type === tab).map(r => `
-                <tr><td>${r.name}</td><td>${r.client}</td><td>${r.type}</td>
-                <td><button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button></td></tr>`).join('');
+                <tr>
+                    <td><b>${r.name}</b></td>
+                    <td>${r.client}</td>
+                    <td>${r.type}</td>
+                    <td style="text-align:right;">
+                        <button class="btn-p" onclick="initViz('${r.url}', '${r.name}')" style="display:inline-flex;">View</button>
+                        <button class="btn-delete" onclick="deleteReport(${r.id})" style="display:inline-flex; margin-left:10px;"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
         }
 
         async function initViz(url, title) {
@@ -141,10 +166,12 @@
             document.getElementById('viz-header-ui').style.display = 'flex';
             document.getElementById('viz-container').style.display = 'flex';
             const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
-            const res = await fetch(csvUrl);
-            const text = await res.text();
-            window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
-            window.populateFilters(); window.recomputeViz();
+            try {
+                const res = await fetch(csvUrl);
+                const text = await res.text();
+                window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
+                window.populateFilters(); window.recomputeViz();
+            } catch(e) { alert("Failed to load sheet. Check CSV permissions."); }
         }
 
         function setTab(t) { tab = t; document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active')); document.getElementById('n-'+t).classList.add('active'); drawTable(); }
