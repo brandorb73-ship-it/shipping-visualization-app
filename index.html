@@ -15,97 +15,84 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; width: calc(100vw - 260px); }
         header { background: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
         .header-actions { display: flex; gap: 8px; align-items: center; }
-        .nav-item { padding: 15px 25px; cursor: pointer; color: #94a3b8; font-weight: 700; font-size: 12px; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .nav-item { padding: 15px 25px; cursor: pointer; color: #94a3b8; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 10px; }
         .nav-item.active { color: var(--blue); background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--blue); }
         .btn-p { background: var(--navy); color: var(--blue); border: 1px solid var(--blue); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; }
-        .btn-p:hover { background: #1e293b; color: white; }
         .input-s { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; }
         .card { margin: 20px; background: white; border-radius: 8px; border: 1px solid var(--border); overflow: auto; flex-grow: 1; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8fafc; padding: 12px; text-align: left; font-size: 11px; color: var(--grey); border-bottom: 1px solid var(--border); }
-        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
         #viz-container { display: none; flex-direction: column; height: 100%; width: 100%; }
-        #map-frame { flex-grow: 1; position: relative; background: #f1f5f9; }
+        #map-frame { flex-grow: 1; background: #f1f5f9; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        #login-scr { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .popup-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 10px; }
+        .popup-table th, .popup-table td { border: 1px solid #ddd; padding: 4px; text-align: left; }
     </style>
 </head>
 <body>
-    <div id="login-scr">
+    <div id="login-scr" style="position:fixed; inset:0; background:var(--navy); display:flex; align-items:center; justify-content:center; z-index:9999;">
         <div style="background:white; padding:40px; border-radius:12px; width:300px; text-align:center;">
-            <h2 style="margin-top:0">BrandOrb</h2>
-            <input type="password" id="pass" class="input-s" placeholder="Access Key" style="width:100%; margin-bottom:15px; box-sizing:border-box;">
-            <button class="btn-p" onclick="doLogin()" style="width:100%; justify-content:center;">Enter</button>
+            <h2>BrandOrb</h2>
+            <input type="password" id="pass" class="input-s" placeholder="Access Key" style="width:100%; margin-bottom:15px;">
+            <button class="btn-p" onclick="doLogin()" style="width:100%; justify-content:center;">Enter Dashboard</button>
         </div>
     </div>
 
     <div id="app-container">
         <aside id="sidebar">
             <div style="padding:30px; font-weight:800; font-size:22px; color:var(--blue);">BrandOrb</div>
-            <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')"><i class="fas fa-map"></i> ROUTE MAPS</div>
-            <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')"><i class="fas fa-share-alt"></i> CLUSTER GRAPHS</div>
+            <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')"><i class="fas fa-route"></i> ROUTE MAPS</div>
+            <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')"><i class="fas fa-project-diagram"></i> CLUSTER GRAPHS</div>
         </aside>
 
         <main id="main-content">
             <header id="list-header">
                 <h1>Intelligence Reports</h1>
                 <div class="header-actions">
-                    <input type="text" id="find-rep" class="input-s" placeholder="Search..." onkeyup="drawTable()">
+                    <button class="btn-p" onclick="openClientMod()"><i class="fas fa-user-plus"></i> Add Client</button>
                     <button class="btn-p" onclick="openMod()"><i class="fas fa-plus"></i> Add Report</button>
-                    <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Key</button>
+                    <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Change Key</button>
                 </div>
             </header>
 
             <header id="viz-header-ui" style="display:none">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <button class="btn-p" onclick="closeViz()"><i class="fas fa-arrow-left"></i> Back</button>
-                    <h2 id="v-title" style="margin:0; font-size:18px;"></h2>
-                </div>
+                <button class="btn-p" onclick="location.reload()"><i class="fas fa-arrow-left"></i> Back</button>
                 <div class="header-actions">
-                    <input type="text" id="ent-search" class="input-s" placeholder="Search Product/Entity..." onkeyup="window.recomputeViz()">
-                    <select id="entity-type-filter" class="input-s" onchange="window.recomputeViz()">
-                        <option value="All">All Entities</option>
-                        <option value="Exporter">Exporters</option>
-                        <option value="Importer">Importers</option>
-                    </select>
+                    <input type="text" id="ent-search" class="input-s" placeholder="Search Entity/Product..." onkeyup="window.recomputeViz()">
                     <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
                     <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
                     <button class="btn-p" onclick="window.downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
-                    <button class="btn-p" onclick="resetFilters()"><i class="fas fa-sync"></i></button>
                 </div>
             </header>
 
             <div id="list-view" class="card">
                 <table>
-                    <thead><tr><th>Name</th><th>Client</th><th>Type</th><th style="text-align:right">Action</th></tr></thead>
+                    <thead><tr><th>Name</th><th>Client</th><th>Type</th><th>Action</th></tr></thead>
                     <tbody id="rep-rows"></tbody>
                 </table>
             </div>
-
-            <div id="viz-container">
-                <div id="map-frame"></div>
-            </div>
+            <div id="viz-container"><div id="map-frame"></div></div>
         </main>
     </div>
 
     <div id="add-modal" class="modal">
         <div style="background:white; padding:30px; border-radius:8px; width:400px;">
             <h3>New Report</h3>
-            <input type="text" id="m-title" class="input-s" placeholder="Title" style="width:100%; margin-bottom:10px; box-sizing:border-box;">
-            <input type="text" id="m-url" class="input-s" placeholder="Google Sheet CSV URL" style="width:100%; margin-bottom:10px; box-sizing:border-box;">
+            <input type="text" id="m-title" class="input-s" placeholder="Title" style="width:100%; margin-bottom:10px;">
+            <input type="text" id="m-url" class="input-s" placeholder="CSV URL" style="width:100%; margin-bottom:10px;">
+            <select id="m-client" class="input-s" style="width:100%; margin-bottom:10px;"></select>
             <select id="m-type" class="input-s" style="width:100%; margin-bottom:20px;">
                 <option value="MAP">Route Map</option>
                 <option value="CLUSTER">Cluster Graph</option>
             </select>
-            <div style="display:flex; gap:10px;">
-                <button class="btn-p" onclick="publishReport()" style="flex:1; justify-content:center;">Publish</button>
-                <button onclick="closeMod()" style="flex:1; border:none; background:none; cursor:pointer;">Cancel</button>
-            </div>
+            <button class="btn-p" onclick="publishReport()" style="width:100%; justify-content:center;">Publish</button>
         </div>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/elfalem/Leaflet.curve@master/src/leaflet.curve.js"></script>
+    <script src="https://unpkg.com/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="visuals.js"></script>
@@ -113,40 +100,39 @@
     <script>
         let currentKey = localStorage.getItem('bo_key') || "admin123";
         let reports = JSON.parse(localStorage.getItem('bo_reports')) || [];
-        let tab = 'MAP', rawData = [];
+        let clients = JSON.parse(localStorage.getItem('bo_clients')) || ["General"];
+        let tab = 'MAP';
 
         function doLogin() {
             if(document.getElementById('pass').value === currentKey) {
                 document.getElementById('login-scr').style.display = 'none';
-                drawTable();
-            } else alert("Wrong Key");
+                updateClientMenu(); drawTable();
+            } else alert("Invalid Key");
         }
 
         function changePass() {
-            const old = prompt("Current Key:");
-            if(old === currentKey) {
-                const nw = prompt("New Key:");
-                if(nw) { currentKey = nw; localStorage.setItem('bo_key', nw); alert("Saved"); }
-            }
+            const nw = prompt("Enter New Access Key:");
+            if(nw) { currentKey = nw; localStorage.setItem('bo_key', nw); alert("Key Updated"); }
+        }
+
+        function openClientMod() {
+            const c = prompt("Enter Client Name:");
+            if(c) { clients.push(c); localStorage.setItem('bo_clients', JSON.stringify(clients)); updateClientMenu(); }
+        }
+
+        function updateClientMenu() {
+            document.getElementById('m-client').innerHTML = clients.map(c => `<option value="${c}">${c}</option>`).join('');
         }
 
         function publishReport() {
-            const t = document.getElementById('m-title').value, u = document.getElementById('m-url').value, ty = document.getElementById('m-type').value;
-            if(t && u) {
-                reports.push({ id: Date.now(), name: t, url: u, type: ty, client: "General" });
-                localStorage.setItem('bo_reports', JSON.stringify(reports));
-                drawTable(); closeMod();
-            }
+            const r = { id: Date.now(), name: document.getElementById('m-title').value, url: document.getElementById('m-url').value, type: document.getElementById('m-type').value, client: document.getElementById('m-client').value };
+            reports.push(r); localStorage.setItem('bo_reports', JSON.stringify(reports)); drawTable(); document.getElementById('add-modal').style.display='none';
         }
 
         function drawTable() {
-            const search = document.getElementById('find-rep').value.toLowerCase();
-            const filtered = reports.filter(r => r.type === tab && r.name.toLowerCase().includes(search));
-            document.getElementById('rep-rows').innerHTML = filtered.map(r => `
-                <tr><td><b>${r.name}</b></td><td>${r.client}</td><td>${r.type}</td>
-                <td style="text-align:right">
-                    <button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button>
-                </td></tr>`).join('');
+            document.getElementById('rep-rows').innerHTML = reports.filter(r => r.type === tab).map(r => `
+                <tr><td>${r.name}</td><td>${r.client}</td><td>${r.type}</td>
+                <td><button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button></td></tr>`).join('');
         }
 
         async function initViz(url, title) {
@@ -154,21 +140,15 @@
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('viz-header-ui').style.display = 'flex';
             document.getElementById('viz-container').style.display = 'flex';
-            document.getElementById('v-title').innerText = title;
-
-            try {
-                const res = await fetch(url.replace(/\/edit.*$/, '/export?format=csv'));
-                const text = await res.text();
-                window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
-                window.populateFilters(); window.recomputeViz();
-            } catch (e) { alert("Load Failed"); closeViz(); }
+            const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
+            const res = await fetch(csvUrl);
+            const text = await res.text();
+            window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
+            window.populateFilters(); window.recomputeViz();
         }
 
         function setTab(t) { tab = t; document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active')); document.getElementById('n-'+t).classList.add('active'); drawTable(); }
-        function closeViz() { location.reload(); }
         function openMod() { document.getElementById('add-modal').style.display = 'flex'; }
-        function closeMod() { document.getElementById('add-modal').style.display = 'none'; }
-        function resetFilters() { document.getElementById('ent-search').value = ""; window.recomputeViz(); }
     </script>
 </body>
 </html>
