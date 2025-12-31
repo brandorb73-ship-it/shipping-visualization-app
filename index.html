@@ -66,17 +66,18 @@
             </header>
 
             <header id="viz-header-ui" style="display:none">
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <button class="btn-p" onclick="closeViz()"><i class="fas fa-arrow-left"></i> Back</button>
-                    <h1 id="v-title">Report</h1>
-                </div>
-                <div class="header-actions">
-                    <input type="text" id="ent-search" class="input-s" placeholder="Search Entity..." onkeyup="window.recomputeViz()">
-                    <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
-                    <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
-                    <button class="btn-p" onclick="resetFilters()"><i class="fas fa-sync"></i> Reset</button>
-                </div>
-            </header>
+    <div style="display:flex; align-items:center; gap:15px;">
+        <button class="btn-p" onclick="closeViz()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h1 id="v-title">Report</h1>
+    </div>
+    <div class="header-actions">
+        <input type="text" id="ent-search" class="input-s" placeholder="Search Product or Entity..." onkeyup="window.recomputeViz()">
+        <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
+        <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
+        <button class="btn-p" onclick="resetFilters()"><i class="fas fa-sync"></i> Reset</button>
+        <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Key</button>
+    </div>
+</header>
 
             <div id="list-view" class="card">
                 <table>
