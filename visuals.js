@@ -1,19 +1,29 @@
 /**
- * BRANDORB VISUALS - REPAIRED CURVES & FILTERS
+ * BRANDORB VISUALS - REPAIR COMPLETE
  */
 
+// Fix PDF Download for Map Background
 window.downloadPDF = function() {
-    html2canvas(document.getElementById('map-frame')).then(canvas => {
+    const element = document.getElementById('map-frame');
+    html2canvas(element, {
+        useCORS: true, 
+        allowTaint: false,
+        backgroundColor: "#f1f5f9",
+        scale: 2
+    }).then(canvas => {
         const link = document.createElement('a');
-        link.download = 'BrandOrb_Report.png';
-        link.href = canvas.toDataURL();
+        link.download = `BrandOrb_Report_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
         link.click();
     });
 };
 
 window.populateFilters = function() {
     if (!window.rawData) return;
-    const h = window.rawData[0];
+    // Clean headers to fix hidden characters (Solves Date N/A)
+    const h = window.rawData[0].map(s => s.trim().replace(/^\uFEFF/, ''));
+    window.cleanHeaders = h;
+
     const data = window.rawData.slice(1);
     const fill = (id, col, lbl) => {
         const i = h.indexOf(col);
@@ -28,18 +38,13 @@ window.populateFilters = function() {
 
 window.recomputeViz = function() {
     const search = document.getElementById('ent-search').value.toLowerCase();
-    const origF = document.getElementById('orig-filter').value;
-    const destF = document.getElementById('dest-filter').value;
-    const h = window.rawData[0];
+    const h = window.cleanHeaders;
     const idx = (n) => h.indexOf(n);
 
     const filtered = {};
     window.rawData.slice(1).forEach(r => {
-        const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
-        const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
         const sMatch = (r[idx("Exporter")] + r[idx("Importer")] + r[idx("PRODUCT")]).toLowerCase().includes(search);
-
-        if (oMatch && dMatch && sMatch) {
+        if (sMatch) {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}`;
             if (!filtered[key]) filtered[key] = [];
             filtered[key].push(r);
@@ -56,7 +61,12 @@ window.recomputeViz = function() {
 
 window.drawMap = function(groups, idx) {
     window.LMap = L.map('map-frame').setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
+    // Added crossOrigin for PDF support
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        crossOrigin: true
+    }).addTo(window.LMap);
+
+    const dateIdx = window.cleanHeaders.findIndex(h => h.toLowerCase().includes("date"));
 
     groups.forEach(group => {
         const f = group[0];
@@ -64,35 +74,33 @@ window.drawMap = function(groups, idx) {
         const p2 = [parseFloat(f[idx("Destination latitude")]), parseFloat(f[idx("Destination longitude")])];
 
         if (!isNaN(p1[0]) && !isNaN(p2[0])) {
-            // CURVED MOVING LINE (AntPath + Curve)
             const controlPoint = [(p1[0] + p2[0]) / 2 + 5, (p1[1] + p2[1]) / 2 + 5];
             const curvePath = L.curve(['M', p1, 'Q', controlPoint, p2]);
+            const latlngs = curvePath.getPath().filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
             
-            // Convert Curve to LatLngs for AntPath
-            const latlngs = curvePath.getPath().filter(item => Array.isArray(item)).map(coord => L.latLng(coord[0], coord[1]));
-            
-            const ant = L.polyline.antPath(latlngs, { color: f[idx("COLOR")] || '#0ea5e9', weight: 3, delay: 1000 }).addTo(window.LMap);
+            const ant = L.polyline.antPath(latlngs, { color: f[idx("COLOR")] || '#0ea5e9', weight: 3 }).addTo(window.LMap);
 
             const tableRows = group.map(s => `
                 <tr>
-                    <td>${s[idx("Date")] || 'N/A'}</td>
+                    <td>${s[dateIdx] || 'N/A'}</td>
                     <td>${s[idx("Quantity")]}</td>
                     <td>$${s[idx("Value(USD)")]}</td>
-                    <td>${s[idx("PRODUCT")]}</td>
+                    <td style="max-width:200px; overflow:hidden; text-overflow:ellipsis;">${s[idx("PRODUCT")]}</td>
                     <td>${s[idx("Mode of Transport")]}</td>
                 </tr>`).join('');
 
             ant.bindPopup(`
-                <div style="width:350px; font-family:sans-serif;">
+                <div style="width:550px;">
                     <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}
-                    <table class="popup-table">
-                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th><th>Mode</th></tr></thead>
-                        <tbody>${tableRows}</tbody>
-                    </table>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})
+                    <div class="popup-table-container">
+                        <table class="popup-table">
+                            <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th><th>Mode</th></tr></thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                    </div>
                 </div>
-            `);
+            `, { maxWidth: 600 });
         }
     });
 };
@@ -108,7 +116,7 @@ window.drawCluster = function(data, idx) {
     data.forEach(r => {
         const exp = r[idx("Exporter")], imp = r[idx("Importer")], oC = r[idx("Origin Country")], dC = r[idx("Destination Country")];
         [exp, imp, oC, dC].forEach(id => {
-            if(!nodeSet.has(id)) { 
+            if(id && !nodeSet.has(id)) { 
                 nodes.push({id, type: (id===oC||id===dC)?'country':(id===exp?'exp':'imp')}); 
                 nodeSet.add(id); 
             }
@@ -118,16 +126,15 @@ window.drawCluster = function(data, idx) {
         links.push({source: imp, target: dC, type: 'loc'});
     });
 
-    const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id(d => d.id).distance(120)).force("charge", d3.forceManyBody().strength(-300)).force("center", d3.forceCenter(width/2, height/2));
+    const sim = d3.forceSimulation(nodes).force("link", d3.forceLink(links).id(d => d.id).distance(150)).force("charge", d3.forceManyBody().strength(-500)).force("center", d3.forceCenter(width/2, height/2));
 
     const link = g.append("g").selectAll("line").data(links).enter().append("line")
-        .attr("stroke", d => d.type === 'loc' ? "#cbd5e1" : "#1e293b").attr("stroke-width", 2)
-        .on("click", (e, d) => { if(d.data) alert(`Product: ${d.data[idx("PRODUCT")]}\nValue: $${d.data[idx("Value(USD)")]}`); });
+        .attr("stroke", d => d.type === 'loc' ? "#cbd5e1" : "#1e293b").attr("stroke-width", 2);
 
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g").call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y}).on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
 
-    node.append("circle").attr("r", d => d.type === 'country' ? 20 : 12).attr("fill", d => d.type === 'country' ? '#475569' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e')).attr("stroke", "#fff");
-    node.append("text").text(d => d.type === 'country' ? "🌐 " + d.id : d.id).attr("y", 30).attr("text-anchor", "middle").attr("fill", "#0f172a").style("font-size", "10px").style("font-weight", "bold");
+    node.append("circle").attr("r", d => d.type === 'country' ? 22 : 14).attr("fill", d => d.type === 'country' ? '#475569' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e')).attr("stroke", "#fff").attr("stroke-width", 2);
+    node.append("text").text(d => d.type === 'country' ? "🌐 " + d.id : d.id).attr("y", 35).attr("text-anchor", "middle").attr("fill", "#0f172a").style("font-size", "11px").style("font-weight", "bold");
 
     sim.on("tick", () => { link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y); node.attr("transform", d=>`translate(${d.x},${d.y})`); });
 };
