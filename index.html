@@ -65,17 +65,25 @@
                 </div>
             </header>
 
-            <header id="viz-header-ui" style="display:none">
+    <script src="https://elfalem.github.io/Leaflet.curve/src/leaflet.curve.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<header id="viz-header-ui" style="display:none">
     <div style="display:flex; align-items:center; gap:15px;">
         <button class="btn-p" onclick="closeViz()"><i class="fas fa-arrow-left"></i> Back</button>
         <h1 id="v-title">Report</h1>
     </div>
     <div class="header-actions">
-        <input type="text" id="ent-search" class="input-s" placeholder="Search Product or Entity..." onkeyup="window.recomputeViz()">
+        <input type="text" id="ent-search" class="input-s" placeholder="Search Product/Entity..." onkeyup="window.recomputeViz()">
+        <select id="entity-type-filter" class="input-s" onchange="window.recomputeViz()">
+            <option value="All">All Entities</option>
+            <option value="Exporter">Exporters Only</option>
+            <option value="Importer">Importers Only</option>
+        </select>
         <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
         <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
+        <button class="btn-p" onclick="downloadPDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
         <button class="btn-p" onclick="resetFilters()"><i class="fas fa-sync"></i> Reset</button>
-        <button class="btn-p" onclick="changePass()"><i class="fas fa-key"></i> Key</button>
     </div>
 </header>
 
