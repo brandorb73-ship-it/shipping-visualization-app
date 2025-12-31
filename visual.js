@@ -2,18 +2,24 @@
  * BRANDORB VISUALS - Route Maps & Cluster Graphs
  */
 
+// Ensure functions are global so index.html can find them
 window.populateFilters = function() {
-    const headers = rawData[0];
+    if (!rawData || rawData.length < 1) return;
+    
+    const headers = rawData[0].map(h => h.trim());
     const idx = (n) => headers.indexOf(n);
     const data = rawData.slice(1);
 
     const fill = (id, headerName) => {
         const i = idx(headerName);
-        if (i === -1) return;
-        const vals = [...new Set(data.map(r => r[i]))].sort();
-        document.getElementById(id).innerHTML = `<option value="All">All ${headerName}s</option>` + 
-                                                 vals.map(v => `<option value="${v}">${v}</option>`).join('');
+        const dropdown = document.getElementById(id);
+        if (i === -1 || !dropdown) return;
+        
+        const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
+        dropdown.innerHTML = `<option value="All">All ${headerName}s</option>` + 
+                             vals.map(v => `<option value="${v}">${v}</option>`).join('');
     };
+
     fill('orig-filter', 'Origin Country');
     fill('dest-filter', 'Destination Country');
 };
