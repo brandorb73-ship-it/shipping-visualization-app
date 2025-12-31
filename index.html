@@ -11,51 +11,34 @@
     <style>
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100vw; font-family: 'Inter', sans-serif; background: var(--navy); overflow: hidden; }
-        
-        /* Layout */
         #app-container { display: none; width: 100vw; height: 100vh; background: var(--bg); display: flex; }
         #sidebar { width: 280px; background: var(--navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.1); }
         #main-content { flex-grow: 1; display: flex; flex-direction: column; width: calc(100vw - 280px); }
-        
-        /* Header */
         header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
         .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        
-        /* Typography */
         h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--navy); }
         .nav-item { padding: 18px 25px; cursor: pointer; color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 12px; display: flex; align-items: center; gap: 12px; }
         .nav-item.active { color: var(--blue); background: rgba(56, 189, 248, 0.1); }
-        .nav-item i { width: 20px; }
-
-        /* UI Elements */
         .btn-p { background: var(--navy); color: var(--blue); border: 1px solid var(--blue); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 13px; transition: 0.2s; }
         .btn-p:hover { background: #1e293b; }
         .input-s { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; outline: none; font-size: 13px; min-width: 150px; }
         .filter-label { font-size: 11px; font-weight: 700; color: var(--grey); text-transform: uppercase; margin-bottom: 2px; display: block; }
-
-        /* Table & Cards */
         .card { margin: 20px; background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: auto; flex-grow: 1; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f8fafc; padding: 12px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--grey); border-bottom: 1px solid var(--border); }
         td { padding: 14px 20px; border-bottom: 1px solid var(--border); font-size: 13px; }
-
-        /* Viz Area */
         #viz-container { display: none; flex-direction: column; height: 100%; position: relative; }
-        #viz-header { background: #f1f5f9; padding: 10px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        #map-frame { flex-grow: 1; background: #eee; position: relative; }
+        #map-frame { flex-grow: 1; background: #0f172a; position: relative; }
 
-        /* Popups */
-        .shipment-popup { min-width: 250px; font-family: 'Inter', sans-serif; }
-        .shipment-popup h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: var(--navy); display: flex; align-items: center; gap: 8px; }
-        .shipment-item { padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 12px; }
-        .shipment-item:last-child { border: none; }
-        .label { font-weight: 700; color: var(--grey); width: 80px; display: inline-block; }
-
-        /* Login */
+        /* Visualization Specific Styles */
+        .leaflet-popup-content-wrapper { background: #1e293b !important; color: white !important; border-radius: 8px !important; border: 1px solid var(--blue); }
+        .leaflet-popup-tip { background: #1e293b !important; }
+        .shipment-item { border-bottom: 1px solid #334155; padding: 8px 0; font-size: 12px; }
+        .label { color: var(--blue); font-weight: bold; margin-right: 5px; }
+        .highlight-node { stroke: var(--blue) !important; stroke-width: 5px !important; r: 30 !important; transition: 0.3s; }
+        
         #login-scr { position: fixed; inset: 0; background: var(--navy); display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .login-box { background: white; padding: 40px; border-radius: 16px; width: 340px; text-align: center; }
-
-        /* Modal */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 10000; }
         .modal-c { background: white; padding: 30px; border-radius: 12px; width: 400px; }
     </style>
@@ -64,7 +47,7 @@
 
     <div id="login-scr">
         <div class="login-box">
-            <h2 style="margin-top:0">BrandOrb</h2>
+            <h2>BrandOrb</h2>
             <input type="password" id="pass" class="input-s" placeholder="Access Key" style="width:100%; margin-bottom:15px; box-sizing:border-box;">
             <button class="btn-p" onclick="doLogin()" style="width:100%; justify-content:center;">Enter Dashboard</button>
         </div>
@@ -86,11 +69,7 @@
                 <div><h1>Intelligence Reports</h1></div>
                 <div class="header-actions">
                     <input type="text" id="find-rep" class="input-s" placeholder="Search reports..." onkeyup="drawTable()">
-                    <select id="cli-filter" class="input-s" onchange="drawTable()">
-                        <option value="All">All Clients</option>
-                        <option value="General">General</option>
-                    </select>
-                    <button class="btn-p" onclick="alert('Client Management Portal')"><i class="fas fa-user-plus"></i> Add Client</button>
+                    <select id="cli-filter" class="input-s" onchange="drawTable()"><option value="All">All Clients</option></select>
                     <button class="btn-p" onclick="openMod()"><i class="fas fa-plus"></i> Add Report</button>
                 </div>
             </header>
@@ -102,23 +81,18 @@
                 </div>
                 <div class="header-actions">
                     <div>
-                        <span class="filter-label">Search Entity</span>
-                        <input type="text" id="ent-search" class="input-s" placeholder="Exporter/Importer..." onkeyup="recomputeViz()">
-                    </div>
-                    <div>
-                        <span class="filter-label">Color Theme</span>
-                        <select id="col-filter" class="input-s" onchange="recomputeViz()">
-                            <option value="All">Original</option>
-                        </select>
+                        <span class="filter-label">Search Entity / Product</span>
+                        <input type="text" id="ent-search" class="input-s" placeholder="Search..." onkeyup="recomputeViz()">
                     </div>
                     <div>
                         <span class="filter-label">Origin</span>
-                        <select id="orig-filter" class="input-s" onchange="recomputeViz()"><option value="All">All Countries</option></select>
+                        <select id="orig-filter" class="input-s" onchange="recomputeViz()"><option value="All">All</option></select>
                     </div>
                     <div>
                         <span class="filter-label">Destination</span>
-                        <select id="dest-filter" class="input-s" onchange="recomputeViz()"><option value="All">All Countries</option></select>
+                        <select id="dest-filter" class="input-s" onchange="recomputeViz()"><option value="All">All</option></select>
                     </div>
+                    <button class="btn-p" onclick="resetFilters()" style="margin-top:15px;"><i class="fas fa-sync"></i> Reset</button>
                 </div>
             </header>
 
@@ -152,15 +126,14 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-ant-path@1.3.0/dist/leaflet-ant-path.js"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="visuals.js"></script>
 
     <script>
         const KEY = "admin123";
         const DB = "https://script.google.com/macros/s/AKfycbzvnTinsKASNna9T_T9ODSy3FiBAU8BN-VciXWmbxdhGWaSUQKZmwnuT9nRW8kORq0/exec";
-        let reports = [];
-        let rawData = [];
-        let tab = 'MAP';
-        let LMap = null;
+        let reports = [], rawData = [], tab = 'MAP', LMap = null;
 
         function doLogin() {
             if(document.getElementById('pass').value === KEY) {
@@ -171,7 +144,6 @@
         }
 
         async function fetchList() {
-            if(!DB.includes("http")) return;
             const res = await fetch(DB);
             const data = await res.json();
             reports = data.slice(1);
@@ -180,17 +152,11 @@
 
         function drawTable() {
             const search = document.getElementById('find-rep').value.toLowerCase();
-            const client = document.getElementById('cli-filter').value;
             const tbody = document.getElementById('rep-rows');
-            
-            const filtered = reports.filter(r => r[3] === tab && r[1].toLowerCase().includes(search) && (client === 'All' || r[4] === client));
+            const filtered = reports.filter(r => r[3] === tab && r[1].toLowerCase().includes(search));
             tbody.innerHTML = filtered.map(r => `
-                <tr>
-                    <td><b>${r[1]}</b></td>
-                    <td>${r[4]}</td>
-                    <td><span style="font-size:10px; font-weight:700; background:#e2e8f0; padding:3px 8px; border-radius:5px;">${r[3]}</span></td>
-                    <td style="text-align:right"><button class="btn-p" onclick="initViz('${r[2]}', '${r[1]}')">View</button></td>
-                </tr>
+                <tr><td><b>${r[1]}</b></td><td>${r[4]}</td><td>${r[3]}</td>
+                <td style="text-align:right"><button class="btn-p" onclick="initViz('${r[2]}', '${r[1]}')">View</button></td></tr>
             `).join('');
         }
 
@@ -211,145 +177,31 @@
             const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
             const res = await fetch(csvUrl);
             const text = await res.text();
-            rawData = text.split('\n').filter(r => r.trim()).slice(1).map(l => l.split(','));
+            // Parse CSV manually to handle quotes/commas
+            rawData = text.split('\n').filter(r => r.trim()).map(l => l.split(',').map(c => c.replace(/"/g, '')));
 
             populateFilters();
             recomputeViz();
         }
 
         function populateFilters() {
-            const colors = [...new Set(rawData.map(r => r[6]))];
-            const origins = [...new Set(rawData.map(r => r[93]))];
-            const dests = [...new Set(rawData.map(r => r[94]))];
+            const headers = rawData[0].map(h => h.trim());
+            const idx = (name) => headers.indexOf(name);
+            const data = rawData.slice(1);
 
-            const fill = (id, list) => {
-                const el = document.getElementById(id);
-                el.innerHTML = '<option value="All">All</option>' + list.sort().map(v => `<option value="${v}">${v}</option>`).join('');
+            const fill = (id, name) => {
+                const list = [...new Set(data.map(r => r[idx(name)]))].sort();
+                document.getElementById(id).innerHTML = '<option value="All">All</option>' + list.map(v => `<option value="${v}">${v}</option>`).join('');
             };
-            fill('col-filter', colors);
-            fill('orig-filter', origins);
-            fill('dest-filter', dests);
+            fill('orig-filter', 'Origin Country');
+            fill('dest-filter', 'Destination Country');
         }
 
-        function recomputeViz() {
-            const search = document.getElementById('ent-search').value.toLowerCase();
-            const colF = document.getElementById('col-filter').value;
-            const origF = document.getElementById('orig-filter').value;
-            const destF = document.getElementById('dest-filter').value;
-
-            const filtered = rawData.filter(r => {
-                const matchesSearch = r[8].toLowerCase().includes(search) || r[13].toLowerCase().includes(search);
-                const matchesCol = colF === 'All' || r[6] === colF;
-                const matchesOrig = origF === 'All' || r[93] === origF;
-                const matchesDest = destF === 'All' || r[94] === destF;
-                return matchesSearch && matchesCol && matchesOrig && matchesDest;
-            });
-
-            const frame = document.getElementById('map-frame');
-            frame.innerHTML = "";
-            if(LMap) { LMap.remove(); LMap = null; }
-
-            if(tab === 'MAP') drawMap(filtered); else drawCluster(filtered);
-        }
-
-        function drawMap(data) {
-            LMap = L.map('map-frame').setView([20, 0], 2);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(LMap);
-
-            const shipments = {};
-            data.forEach(r => {
-                const key = `${r[8]}|${r[13]}`;
-                if(!shipments[key]) shipments[key] = [];
-                shipments[key].push(r);
-            });
-
-            Object.values(shipments).forEach(group => {
-                const r = group[0];
-                const oLat = parseFloat(r[95]), oLng = parseFloat(r[96]);
-                const dLat = parseFloat(r[97]), dLng = parseFloat(r[98]);
-
-                if(!isNaN(oLat) && !isNaN(dLat)) {
-                    // Draw Directional Line
-                    const line = L.polyline([[oLat, oLng], [dLat, dLng]], {
-                        color: r[6] || '#38bdf8', weight: group.length > 1 ? 5 : 2, opacity: 0.6
-                    }).addTo(LMap);
-
-                    const itemsHtml = group.map(s => `
-                        <div class="shipment-item">
-                            <div><b>${s[5]}</b></div>
-                            <div><span class="label">Value:</span> ${s[18]} USD</div>
-                            <div><span class="label">Qty:</span> ${s[21]}</div>
-                            <div><span class="label">Date:</span> ${s[1]}</div>
-                        </div>
-                    `).join('');
-
-                    const modeIcon = r[36].toLowerCase().includes('air') ? 'plane' : (r[36].toLowerCase().includes('sea') ? 'ship' : 'truck');
-                    
-                    line.bindPopup(`
-                        <div class="shipment-popup">
-                            <h3><i class="fas fa-${modeIcon}"></i> Shipment Details</h3>
-                            <div><b>Exp:</b> ${r[8]}</div>
-                            <div><b>Imp:</b> ${r[13]}</div>
-                            <div><b>Ports:</b> ${r[31]} <i class="fas fa-arrow-right"></i> ${r[32]}</div>
-                            <div style="margin-top:10px; max-height:150px; overflow-y:auto">${itemsHtml}</div>
-                        </div>
-                    `);
-
-                    // Country Markers
-                    [ [oLat, oLng, r[93]], [dLat, dLng, r[94]] ].forEach(m => {
-                        L.circleMarker([m[0], m[1]], {radius: 4, color: '#0f172a', fillColor:'#fff', fillOpacity:1})
-                         .addTo(LMap).bindPopup(`<b>${m[2]}</b>`);
-                    });
-                }
-            });
-        }
-
-        function drawCluster(data) {
-            const frame = document.getElementById('map-frame');
-            const w = frame.clientWidth, h = frame.clientHeight;
-            const svg = d3.select("#map-frame").append("svg").attr("width", w).attr("height", h);
-            const g = svg.append("g");
-            svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
-
-            // Arrows
-            svg.append("defs").append("marker").attr("id","arrow").attr("viewBox","0 -5 10 10").attr("refX",20).attr("refY",0).attr("markerWidth",6).attr("markerHeight",6).attr("orient","auto").append("path").attr("d","M0,-5L10,0L0,5").attr("fill","#cbd5e1");
-
-            let nodes = [], links = [], nodeSet = new Set();
-            data.forEach(r => {
-                const s = r[8], t = r[13];
-                if(!nodeSet.has(s)) { nodes.push({id: s, type: 'exp', country: r[93]}); nodeSet.add(s); }
-                if(!nodeSet.has(t)) { nodes.push({id: t, type: 'imp', country: r[94]}); nodeSet.add(t); }
-                links.push({source: s, target: t, prod: r[5], val: r[18], qty: r[21], mode: r[36], color: r[6]});
-            });
-
-            const sim = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(links).id(d=>d.id).distance(150))
-                .force("charge", d3.forceManyBody().strength(-400))
-                .force("center", d3.forceCenter(w/2, h/2))
-                .force("x", d3.forceX(d => d.type === 'exp' ? w*0.25 : w*0.75).strength(0.1));
-
-            const link = g.append("g").selectAll("line").data(links).enter().append("line")
-                .attr("stroke", d => d.color || "#cbd5e1").attr("stroke-width", 2).attr("marker-end", "url(#arrow)")
-                .on("mouseover", function(e, d) {
-                    d3.select(this).attr("stroke-width", 4);
-                    const tip = d3.select("body").append("div").attr("class","shipment-popup").style("position","absolute").style("background","white").style("padding","10px").style("border","1px solid #ddd").style("border-radius","8px").style("left", e.pageX+10+"px").style("top", e.pageY+10+"px");
-                    tip.html(`<b>${d.prod}</b><br>Value: ${d.val}<br>Qty: ${d.qty}<br>Mode: ${d.mode}`);
-                })
-                .on("mouseout", function() { d3.select(this).attr("stroke-width", 2); d3.selectAll(".shipment-popup").remove(); });
-
-            const node = g.append("g").selectAll("g").data(nodes).enter().append("g").call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
-            node.append("circle").attr("r", 10).attr("fill", d => d.type === 'exp' ? '#38bdf8' : '#0f172a');
-            node.append("text").text(d => d.id).attr("x", 14).attr("y", 4).style("font-size", "10px").style("font-weight","700");
-            node.append("text").text(d => d.country).attr("x", 14).attr("y", 15).style("font-size", "8px").style("fill", "#64748b");
-
-            sim.on("tick", () => {
-                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
-                node.attr("transform", d => `translate(${d.x},${d.y})`);
-            });
-
-            function dragstarted(e, d) { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
-            function dragged(e, d) { d.fx = e.x; d.fy = e.y; }
-            function dragended(e, d) { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }
+        function resetFilters() {
+            document.getElementById('ent-search').value = "";
+            document.getElementById('orig-filter').value = "All";
+            document.getElementById('dest-filter').value = "All";
+            recomputeViz();
         }
 
         function closeViz() {
@@ -358,7 +210,6 @@
             document.getElementById('list-header').style.display = 'flex';
             document.getElementById('list-view').style.display = 'block';
         }
-
         function openMod() { document.getElementById('add-modal').style.display = 'flex'; }
         function closeMod() { document.getElementById('add-modal').style.display = 'none'; }
     </script>
