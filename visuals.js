@@ -1,23 +1,68 @@
 /**
- * BRANDORB VISUALS - PRODUCTION STABLE
+ * BRANDORB VISUALS - STABLE PRODUCTION
  */
 window.clusterMode = 'COUNTRY';
 
+// Helper to find column index safely
+function getCol(headers, name) {
+    const idx = headers.findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
+    if (idx === -1) console.warn(`Column missing: ${name}`);
+    return idx;
+}
+
+window.populateFilters = function() {
+    if (!window.rawData || window.rawData.length < 2) return;
+    const h = window.rawData[0];
+    const data = window.rawData.slice(1);
+    
+    const fill = (id, colName, label) => {
+        const i = getCol(h, colName);
+        if (i === -1) return;
+        const el = document.getElementById(id);
+        const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
+        el.innerHTML = `<option value="All">All ${label}</option>` + 
+                       vals.map(v => `<option value="${v}">${v}</option>`).join('');
+    };
+
+    fill('orig-filter', 'Origin Country', 'Countries');
+    fill('dest-filter', 'Destination Country', 'Countries');
+};
+
 window.recomputeViz = function() {
-    if (!window.rawData) return;
+    if (!window.rawData || window.rawData.length < 2) {
+        console.error("Data not ready for visualization");
+        return;
+    }
+
+    const h = window.rawData[0];
     const search = document.getElementById('ent-search').value.toLowerCase();
     const origF = document.getElementById('orig-filter').value;
     const destF = document.getElementById('dest-filter').value;
-    
-    // HEADER INDEXER WITH AUTO-TRIM (Fixes the "undefined" issues)
-    const h = window.rawData[0].map(v => v.trim());
-    const idx = (n) => h.indexOf(n);
+
+    const idx = {
+        exp: getCol(h, "Exporter"),
+        imp: getCol(h, "Importer"),
+        oC:  getCol(h, "Origin Country"),
+        dC:  getCol(h, "Destination Country"),
+        prod:getCol(h, "PRODUCT"),
+        lat1:getCol(h, "Origin latitude"),
+        lon1:getCol(h, "Origin longitude"),
+        lat2:getCol(h, "Destination latitude"),
+        lon2:getCol(h, "Destination longitude"),
+        date:getCol(h, "Date"),
+        qty: getCol(h, "Quantity"),
+        val: getCol(h, "Value(USD)"),
+        mode:getCol(h, "Mode of Transport"),
+        col: getCol(h, "COLOR"),
+        oPort: getCol(h, "Origin Port"),
+        dPort: getCol(h, "Destination Port")
+    };
 
     const filteredRows = window.rawData.slice(1).filter(r => {
-        if (!r[idx("Exporter")]) return false;
-        const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
-        const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
-        const sMatch = (r[idx("Exporter")] + r[idx("Importer")] + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
+        if (!r[idx.exp]) return false;
+        const oMatch = origF === 'All' || r[idx.oC] === origF;
+        const dMatch = destF === 'All' || r[idx.dC] === destF;
+        const sMatch = (r[idx.exp] + r[idx.imp] + (r[idx.prod]||"")).toLowerCase().includes(search);
         return oMatch && dMatch && sMatch;
     });
 
@@ -28,7 +73,7 @@ window.recomputeViz = function() {
     if (window.currentTab === 'MAP') {
         const groups = {};
         filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}`;
+            const key = `${r[idx.exp]}|${r[idx.imp]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
@@ -49,49 +94,41 @@ window.drawMap = function(groups, idx) {
 
     groups.forEach(group => {
         const f = group[0];
-        const p1 = [parseFloat(f[idx("Origin latitude")]), parseFloat(f[idx("Origin longitude")])];
-        const p2 = [parseFloat(f[idx("Destination latitude")]), parseFloat(f[idx("Destination longitude")])];
+        const p1 = [parseFloat(f[idx.lat1]), parseFloat(f[idx.lon1])];
+        const p2 = [parseFloat(f[idx.lat2]), parseFloat(f[idx.lon2])];
 
         if (!isNaN(p1[0]) && !isNaN(p2[0])) {
-            // SMOOTH ARC MATH
-            const offsetX = (p2[1] - p1[1]) * 0.25;
-            const offsetY = (p1[0] - p2[0]) * 0.25;
-            const mid = [(p1[0] + p2[0]) / 2 + offsetY, (p1[1] + p2[1]) / 2 + offsetX];
+            // SMOOTH GEODESIC ARC MATH
+            const midLat = (p1[0] + p2[0]) / 2 + (p2[1] - p1[1]) * 0.1;
+            const midLon = (p1[1] + p2[1]) / 2 + (p1[0] - p2[0]) * 0.1;
+            const mid = [midLat, midLon];
             
-            const curve = L.curve(['M', p1, 'Q', mid, p2], {
-                color: f[idx("COLOR")] || '#0ea5e9', 
-                fill: false, weight: 3
-            });
-
-            // Convert curve to points for AntPath
-            const latlngs = curve.getPath().filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
+            const latlngs = L.curve(['M', p1, 'Q', mid, p2]).getPath()
+                             .filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
             
             const ant = L.polyline.antPath(latlngs, { 
-                color: f[idx("COLOR")] || '#0ea5e9', 
-                weight: 3, 
-                pulseColor: '#ffffff',
-                delay: 1000 
+                color: f[idx.col] || '#0ea5e9', weight: 3, delay: 1000 
             }).addTo(window.LMap);
 
-            const tableRows = group.map(s => `
+            const rows = group.map(s => `
                 <tr>
-                    <td>${s[idx("Date")] || 'N/A'}</td>
-                    <td>${s[idx("Quantity")]}</td>
-                    <td>$${s[idx("Value(USD)")]}</td>
-                    <td>${s[idx("PRODUCT")]}</td>
-                    <td>${s[idx("Mode of Transport")] || 'N/A'}</td>
+                    <td>${s[idx.date]}</td>
+                    <td>${s[idx.qty]}</td>
+                    <td>$${s[idx.val]}</td>
+                    <td>${s[idx.prod]}</td>
+                    <td>${s[idx.mode] || 'Sea'}</td>
                 </tr>`).join('');
 
             ant.bindPopup(`
                 <div style="width:380px; font-size:12px;">
-                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    <b>Exporter:</b> ${f[idx.exp]} (${f[idx.oC]})<br>
+                    <b>Importer:</b> ${f[idx.imp]} (${f[idx.dC]})<br>
+                    <b>Ports:</b> ${f[idx.oPort] || 'N/A'} → ${f[idx.dPort] || 'N/A'}
                     <table class="popup-table">
                         <thead><tr><th>Date</th><th>Quantity</th><th>Value (USD)</th><th>PRODUCT</th><th>Mode</th></tr></thead>
-                        <tbody>${tableRows}</tbody>
+                        <tbody>${rows}</tbody>
                     </table>
-                </div>`, { maxWidth: 400 });
+                </div>`);
         }
     });
 };
@@ -106,12 +143,9 @@ window.drawCluster = function(data, idx) {
     let nodes = [], links = [], nodeSet = new Set();
     
     data.forEach(r => {
-        const exp = r[idx("Exporter")], imp = r[idx("Importer")];
-        const oC = r[idx("Origin Country")], dC = r[idx("Destination Country")];
-        const prod = r[idx("PRODUCT")];
-
-        const parent1 = window.clusterMode === 'COUNTRY' ? oC : prod;
-        const parent2 = window.clusterMode === 'COUNTRY' ? dC : prod;
+        const exp = r[idx.exp], imp = r[idx.imp];
+        const parent1 = window.clusterMode === 'COUNTRY' ? r[idx.oC] : r[idx.prod];
+        const parent2 = window.clusterMode === 'COUNTRY' ? r[idx.dC] : r[idx.prod];
 
         [parent1, parent2, exp, imp].forEach((id, i) => {
             if(id && !nodeSet.has(id)) {
@@ -120,18 +154,17 @@ window.drawCluster = function(data, idx) {
             }
         });
         links.push({source: exp, target: imp, type: 'trade', data: r});
-        links.push({source: parent1, target: exp, type: 'geo'});
-        links.push({source: parent2, target: imp, type: 'geo'});
+        links.push({source: parent1, target: exp, type: 'link'});
+        links.push({source: parent2, target: imp, type: 'link'});
     });
 
     const sim = d3.forceSimulation(nodes)
-        .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.type === 'geo' ? 60 : 180))
+        .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.type === 'link' ? 60 : 180))
         .force("charge", d3.forceManyBody().strength(-400))
         .force("center", d3.forceCenter(width/2, height/2));
 
     const link = g.append("g").selectAll("line").data(links).enter().append("line")
-        .attr("stroke", d => d.type === 'geo' ? "#e2e8f0" : "#94a3b8")
-        .attr("stroke-width", 2);
+        .attr("stroke", d => d.type === 'link' ? "#e2e8f0" : "#94a3b8").attr("stroke-width", 2);
 
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g")
         .call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
@@ -148,12 +181,10 @@ window.drawCluster = function(data, idx) {
 
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
         d3.selectAll(".cluster-pop").remove();
-        d3.select("#map-frame").append("div").attr("class", "cluster-pop")
+        const pop = d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                   <strong style="color:#0ea5e9">${d.data[idx("PRODUCT")]}</strong><br>
-                   <b>Date:</b> ${d.data[idx("Date")] || 'N/A'}<br>
-                   <b>Value:</b> $${d.data[idx("Value(USD)")]}`);
+                   <strong>${d.data[idx.prod]}</strong><br><b>Date:</b> ${d.data[idx.date]}<br><b>Value:</b> $${d.data[idx.val]}`);
     });
 
     sim.on("tick", () => {
