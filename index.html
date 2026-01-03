@@ -302,20 +302,26 @@
             const r = { id: Date.now(), name: document.getElementById('m-title').value, url: document.getElementById('m-url').value, type: document.getElementById('m-type').value, client: document.getElementById('m-client').value };
             reports.push(r); localStorage.setItem('bo_reports', JSON.stringify(reports)); drawTable(); document.getElementById('add-modal').style.display='none';
         }
-      function drawTable() {
-    // Re-filter the reports based on the current tab (MAP or CLUSTER)
+    // Function to render the list of reports
+function drawTable() {
+    const tableBody = document.getElementById('rep-rows');
     const filtered = reports.filter(r => r.type === window.currentTab);
     
-    document.getElementById('rep-rows').innerHTML = filtered.map(r => `
+    if (filtered.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">No reports added yet.</td></tr>`;
+        return;
+    }
+
+    tableBody.innerHTML = filtered.map(r => `
         <tr>
             <td>${r.name}</td>
             <td>${r.client}</td>
             <td>${r.type}</td>
-            <td style="display: flex; gap: 8px;">
-                <button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button>
-                <button class="delete-btn" onclick="deleteReport(${r.id})">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            <td>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn-p" onclick="window.initViz('${r.url}', '${r.name}')">View</button>
+                    <button class="delete-btn" onclick="deleteReport(${r.id})"><i class="fas fa-trash-alt"></i></button>
+                </div>
             </td>
         </tr>`).join('');
 }
@@ -331,28 +337,40 @@ function deleteReport(id) {
         drawTable();
     }
 }
+// Global function to initialize visualization
 window.initViz = function(url, name) {
+    console.log("Attempting to load:", name, "URL:", url);
+    
+    // 1. Update Title and Show Loader
     document.getElementById('viz-title').innerText = name;
     document.getElementById('loader').style.display = 'flex';
     
-    // Use PapaParse with explicit configuration to ensure it splits columns correctly
+    // 2. Clear previous map state
+    const frame = document.getElementById('map-frame');
+    frame.innerHTML = "";
+
+    // 3. Fetch and Parse CSV
     Papa.parse(url, {
         download: true,
-        header: false, // We handle headers manually for better control
+        header: false,
         skipEmptyLines: true,
         complete: function(results) {
+            console.log("CSV Parse Complete. Rows found:", results.data.length);
             document.getElementById('loader').style.display = 'none';
+            
             if (results.data && results.data.length > 1) {
                 window.rawData = results.data;
-                window.populateFilters();
-                window.recomputeViz();
+                // These functions live in visuals.js
+                if (typeof window.populateFilters === "function") window.populateFilters();
+                if (typeof window.recomputeViz === "function") window.recomputeViz();
             } else {
-                alert("Error: The CSV file appears to be empty or invalid.");
+                alert("The CSV file appears to be empty or formatted incorrectly.");
             }
         },
         error: function(err) {
             document.getElementById('loader').style.display = 'none';
-            alert("Error loading data: " + err.message);
+            console.error("PapaParse Error:", err);
+            alert("Could not load CSV. Ensure the link is a 'Public' Google Sheets CSV link.");
         }
     });
 };
