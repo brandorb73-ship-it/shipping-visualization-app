@@ -2,9 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BrandOrb Logistics Dashboard</title>
-    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -14,102 +12,75 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
-        :root { --primary: #3b82f6; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background: var(--bg); color: var(--text); overflow-x: hidden; }
-        
-        /* Navigation & Headers */
-        #list-header, #viz-header-ui { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 15px 25px; background: white; border-bottom: 1px solid #e2e8f0; 
-        }
-
-        /* Buttons & Inputs */
-        .btn-p { 
-            background: var(--primary); color: white; border: none; padding: 8px 16px; 
-            border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500;
-        }
-        .btn-p:hover { background: #2563eb; }
-        .input-s { padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; }
-        
-        /* Layout Containers */
-        #viz-container { height: calc(100vh - 70px); width: 100vw; position: relative; }
+        :root { --primary: #3b82f6; --bg: #f8fafc; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg); }
+        #list-header, #viz-header-ui { display: flex; justify-content: space-between; padding: 15px; background: white; border-bottom: 1px solid #ddd; }
+        .btn-p { background: var(--primary); color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .input-s { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        #viz-container { height: calc(100vh - 70px); width: 100%; display: none; }
         #map-frame { height: 100%; width: 100%; }
-        
-        /* Popup Tables */
-        .popup-table-container { max-height: 250px; overflow-y: auto; margin-top: 10px; border: 1px solid #e2e8f0; }
-        .popup-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .popup-table th { background: #f1f5f9; position: sticky; top: 0; padding: 8px; text-align: left; }
-        .popup-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
-
-        /* Scannable table rows */
-        tbody tr:nth-child(even) { background: #f8fafc; }
+        .popup-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+        .popup-table th { background: #eee; padding: 5px; text-align: left; }
+        .popup-table td { padding: 5px; border-bottom: 1px solid #ddd; }
+        #access-denied { display:none; height:100vh; text-align:center; padding-top:100px; }
     </style>
 </head>
 <body>
 
-    <header id="list-header">
-        <div style="font-weight: 800; font-size: 20px; color: #0f172a;">BrandOrb <span style="font-weight: 300;">Visuals</span></div>
-        <div style="display: flex; gap: 10px;">
-            <button class="btn-p" onclick="openViz('MAP')"><i class="fas fa-route"></i> Route Map</button>
-            <button class="btn-p" onclick="openViz('CLUSTER')"><i class="fas fa-project-diagram"></i> Cluster Graph</button>
-        </div>
-    </header>
+    <div id="access-denied">
+        <h1>Access Restricted</h1>
+        <p>Please use a valid secure link.</p>
+    </div>
 
-    <header id="viz-header-ui" style="display:none;">
-        <button class="btn-p" onclick="window.goBack()" style="background: #64748b;">
-            <i class="fas fa-arrow-left"></i> Back
-        </button>
-        
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <button id="fit-btn" class="btn-p" onclick="window.fitCluster()" style="display:none; background: #8b5cf6;">
-                <i class="fas fa-expand"></i> Fit Graph
-            </button>
-            
-            <input type="text" id="ent-search" class="input-s" placeholder="Search Exporter/Product..." onkeyup="window.recomputeViz()">
-            
-            <select id="orig-filter" class="input-s" onchange="window.recomputeViz()">
-                <option value="All">All Origins</option>
-            </select>
-            
-            <select id="dest-filter" class="input-s" onchange="window.recomputeViz()">
-                <option value="All">All Destinations</option>
-            </select>
-            
-            <button class="btn-p" onclick="window.downloadPDF()">
-                <i class="fas fa-file-pdf"></i> Download PDF
-            </button>
-        </div>
-    </header>
+    <div id="main-app-content">
+        <header id="list-header">
+            <div style="font-weight:bold; font-size:1.2rem;">BrandOrb Visuals</div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn-p" onclick="openViz('MAP')">Route Map</button>
+                <button class="btn-p" onclick="openViz('CLUSTER')">Cluster Graph</button>
+            </div>
+        </header>
 
-    <main id="list-view" style="padding: 40px; text-align: center;">
-        <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
-            <h2>Welcome to Logistics Intel</h2>
-            <p style="color: #64748b;">Select a visualization mode above to analyze your trade data. Your CSV is loaded and ready.</p>
-        </div>
-    </main>
+        <header id="viz-header-ui" style="display:none;">
+            <button class="btn-p" onclick="window.goBack()">Back</button>
+            <div style="display:flex; gap:10px;">
+                <button id="fit-btn" class="btn-p" onclick="window.fitCluster()" style="display:none;">Fit Graph</button>
+                <input type="text" id="ent-search" class="input-s" placeholder="Search..." onkeyup="window.recomputeViz()">
+                <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
+                <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
+                <button class="btn-p" onclick="window.downloadPDF()">PDF</button>
+            </div>
+        </header>
 
-    <section id="viz-container" style="display:none;">
-        <div id="map-frame"></div>
-    </section>
+        <div id="list-view" style="padding:20px;">
+            <h3>Data Loaded Successfully. Select a view above.</h3>
+        </div>
+
+        <section id="viz-container">
+            <div id="map-frame"></div>
+        </section>
+    </div>
 
     <script>
+        // TOKEN GATE (Internal Check)
+        const VALID_TOKENS = ["clientA77", "test"]; // Add "test" to make local work easier
+        const urlParams = new URLSearchParams(window.location.search);
+        const userToken = urlParams.get('token');
+
+        if (!VALID_TOKENS.includes(userToken)) {
+            document.getElementById('main-app-content').style.display = 'none';
+            document.getElementById('access-denied').style.display = 'block';
+        }
+
         let tab = 'MAP';
-        
         function openViz(mode) {
             tab = mode;
-            // Toggle Display
             document.getElementById('list-header').style.display = 'none';
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('viz-header-ui').style.display = 'flex';
             document.getElementById('viz-container').style.display = 'block';
-            
-            // Show/Hide Fit Button based on mode
             document.getElementById('fit-btn').style.display = (mode === 'CLUSTER') ? 'flex' : 'none';
-            
-            // Trigger the Drawing Logic in visuals.js
-            if (window.recomputeViz) {
-                window.recomputeViz();
-            }
+            if (window.recomputeViz) window.recomputeViz();
         }
     </script>
     <script src="visuals.js"></script>
