@@ -68,16 +68,42 @@
     font-weight: bold;
     color: #64748b;
 } 
-     /* This creates a light "stage" for your logo so Dark Blue shows up */   
-        .logo-slot { 
-    width: 100%;
-    min-height: 90px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    padding: 20px 0;
-    background: rgba(255, 255, 255, 0.05); /* Subtle contrast */
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    <style>
+    /* Logo Tile Background */
+    .logo-slot { 
+        width: 100%;
+        padding: 30px 10px;
+        background: #ffffff; /* Solid white tile so dark blue shows */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 15px;
+    }
+
+    /* Toggle Switches for Cluster */
+    .viz-controls {
+        padding: 10px 20px;
+        display: flex;
+        gap: 10px;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .toggle-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 20px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        cursor: pointer;
+    }
+    .toggle-btn.active {
+        background: #0f172a;
+        color: white;
+        border-color: #0f172a;
+    }
+</style>
 }
 
 .logo-slot img { 
@@ -102,14 +128,10 @@
     <div id="app-container">
         <aside id="sidebar">
     <div class="logo-slot" id="sidebar-logo">
-        <div style="font-weight:800; font-size:22px; color:var(--blue);">BrandOrb</div>
+        <div style="font-weight:800; font-size:22px; color:#0f172a;">BrandOrb</div>
     </div>
-    <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')">
-        <i class="fas fa-route"></i> ROUTE MAPS
-    </div>
-    <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')">
-        <i class="fas fa-project-diagram"></i> CLUSTER GRAPHS
-    </div>
+    <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')"><i class="fas fa-route"></i> ROUTE MAPS</div>
+    <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')"><i class="fas fa-project-diagram"></i> CLUSTER GRAPHS</div>
 </aside>
 
         <main id="main-content">
