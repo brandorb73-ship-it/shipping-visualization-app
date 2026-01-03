@@ -1,61 +1,43 @@
 /**
- * BRANDORB VISUALS - STABLE PRODUCTION
+ * BRANDORB VISUALS - DATE FIX & STABLE STRAIGHT PATHS
  */
 window.clusterMode = 'COUNTRY';
 
-// Helper to find column index safely
-function getCol(headers, name) {
-    const idx = headers.findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
-    if (idx === -1) console.warn(`Column missing: ${name}`);
-    return idx;
+function getIdx(headers, targets) {
+    // Aggressive cleaning: Remove non-printable characters and spaces
+    const cleanHeaders = headers.map(h => h ? h.replace(/[^\x20-\x7E]/g, "").trim().toLowerCase() : "");
+    for (let t of targets) {
+        const target = t.toLowerCase();
+        const found = cleanHeaders.indexOf(target);
+        if (found !== -1) return found;
+    }
+    return -1;
 }
 
-window.populateFilters = function() {
-    if (!window.rawData || window.rawData.length < 2) return;
-    const h = window.rawData[0];
-    const data = window.rawData.slice(1);
-    
-    const fill = (id, colName, label) => {
-        const i = getCol(h, colName);
-        if (i === -1) return;
-        const el = document.getElementById(id);
-        const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
-        el.innerHTML = `<option value="All">All ${label}</option>` + 
-                       vals.map(v => `<option value="${v}">${v}</option>`).join('');
-    };
-
-    fill('orig-filter', 'Origin Country', 'Countries');
-    fill('dest-filter', 'Destination Country', 'Countries');
-};
-
 window.recomputeViz = function() {
-    if (!window.rawData || window.rawData.length < 2) {
-        console.error("Data not ready for visualization");
-        return;
-    }
-
+    if (!window.rawData || window.rawData.length < 2) return;
+    
     const h = window.rawData[0];
     const search = document.getElementById('ent-search').value.toLowerCase();
     const origF = document.getElementById('orig-filter').value;
     const destF = document.getElementById('dest-filter').value;
 
     const idx = {
-        exp: getCol(h, "Exporter"),
-        imp: getCol(h, "Importer"),
-        oC:  getCol(h, "Origin Country"),
-        dC:  getCol(h, "Destination Country"),
-        prod:getCol(h, "PRODUCT"),
-        lat1:getCol(h, "Origin latitude"),
-        lon1:getCol(h, "Origin longitude"),
-        lat2:getCol(h, "Destination latitude"),
-        lon2:getCol(h, "Destination longitude"),
-        date:getCol(h, "Date"),
-        qty: getCol(h, "Quantity"),
-        val: getCol(h, "Value(USD)"),
-        mode:getCol(h, "Mode of Transport"),
-        col: getCol(h, "COLOR"),
-        oPort: getCol(h, "Origin Port"),
-        dPort: getCol(h, "Destination Port")
+        exp: getIdx(h, ["Exporter"]),
+        imp: getIdx(h, ["Importer"]),
+        oC:  getIdx(h, ["Origin Country"]),
+        dC:  getIdx(h, ["Destination Country"]),
+        prod:getIdx(h, ["PRODUCT"]),
+        lat1:getIdx(h, ["Origin latitude"]),
+        lon1:getIdx(h, ["Origin longitude"]),
+        lat2:getIdx(h, ["Destination latitude"]),
+        lon2:getIdx(h, ["Destination longitude"]),
+        date:getIdx(h, ["Date", "Shipment Date", "YYYY-MM-DD"]),
+        qty: getIdx(h, ["Quantity"]),
+        val: getIdx(h, ["Value(USD)", "Value"]),
+        mode:getIdx(h, ["Mode of Transport"]),
+        oPort: getIdx(h, ["Origin Port"]),
+        dPort: getIdx(h, ["Destination Port"])
     };
 
     const filteredRows = window.rawData.slice(1).filter(r => {
@@ -98,37 +80,34 @@ window.drawMap = function(groups, idx) {
         const p2 = [parseFloat(f[idx.lat2]), parseFloat(f[idx.lon2])];
 
         if (!isNaN(p1[0]) && !isNaN(p2[0])) {
-            // SMOOTH GEODESIC ARC MATH
-            const midLat = (p1[0] + p2[0]) / 2 + (p2[1] - p1[1]) * 0.1;
-            const midLon = (p1[1] + p2[1]) / 2 + (p1[0] - p2[0]) * 0.1;
-            const mid = [midLat, midLon];
-            
-            const latlngs = L.curve(['M', p1, 'Q', mid, p2]).getPath()
-                             .filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
-            
-            const ant = L.polyline.antPath(latlngs, { 
-                color: f[idx.col] || '#0ea5e9', weight: 3, delay: 1000 
+            // STRAIGHT LINE WITH ANT PATH
+            const ant = L.polyline.antPath([p1, p2], { 
+                color: '#38bdf8', weight: 3, delay: 1000 
             }).addTo(window.LMap);
 
             const rows = group.map(s => `
                 <tr>
-                    <td>${s[idx.date]}</td>
-                    <td>${s[idx.qty]}</td>
-                    <td>$${s[idx.val]}</td>
-                    <td>${s[idx.prod]}</td>
-                    <td>${s[idx.mode] || 'Sea'}</td>
+                    <td>${s[idx.date] || "N/A"}</td>
+                    <td>${s[idx.qty] || "0"}</td>
+                    <td>$${s[idx.val] || "0"}</td>
+                    <td>${s[idx.prod] || "N/A"}</td>
+                    <td>${s[idx.mode] || "N/A"}</td>
                 </tr>`).join('');
 
             ant.bindPopup(`
-                <div style="width:380px; font-size:12px;">
-                    <b>Exporter:</b> ${f[idx.exp]} (${f[idx.oC]})<br>
-                    <b>Importer:</b> ${f[idx.imp]} (${f[idx.dC]})<br>
-                    <b>Ports:</b> ${f[idx.oPort] || 'N/A'} → ${f[idx.dPort] || 'N/A'}
-                    <table class="popup-table">
-                        <thead><tr><th>Date</th><th>Quantity</th><th>Value (USD)</th><th>PRODUCT</th><th>Mode</th></tr></thead>
-                        <tbody>${rows}</tbody>
-                    </table>
-                </div>`);
+                <div class="map-popup-container">
+                    <div style="font-size:12px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                        <b>Exporter:</b> ${f[idx.exp]}<br>
+                        <b>Importer:</b> ${f[idx.imp]}<br>
+                        <b>Route:</b> ${f[idx.oC]} → ${f[idx.dC]}
+                    </div>
+                    <div class="popup-scroll">
+                        <table class="popup-table">
+                            <thead><tr><th>Date</th><th>Quantity</th><th>Value(USD)</th><th>PRODUCT</th><th>Mode</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>`, { maxWidth: 450 });
         }
     });
 };
@@ -144,18 +123,18 @@ window.drawCluster = function(data, idx) {
     
     data.forEach(r => {
         const exp = r[idx.exp], imp = r[idx.imp];
-        const parent1 = window.clusterMode === 'COUNTRY' ? r[idx.oC] : r[idx.prod];
-        const parent2 = window.clusterMode === 'COUNTRY' ? r[idx.dC] : r[idx.prod];
+        const p1 = window.clusterMode === 'COUNTRY' ? r[idx.oC] : r[idx.prod];
+        const p2 = window.clusterMode === 'COUNTRY' ? r[idx.dC] : r[idx.prod];
 
-        [parent1, parent2, exp, imp].forEach((id, i) => {
+        [p1, p2, exp, imp].forEach((id, i) => {
             if(id && !nodeSet.has(id)) {
                 nodes.push({id, type: i < 2 ? 'parent' : (i === 2 ? 'exp' : 'imp')});
                 nodeSet.add(id);
             }
         });
         links.push({source: exp, target: imp, type: 'trade', data: r});
-        links.push({source: parent1, target: exp, type: 'link'});
-        links.push({source: parent2, target: imp, type: 'link'});
+        links.push({source: p1, target: exp, type: 'link'});
+        links.push({source: p2, target: imp, type: 'link'});
     });
 
     const sim = d3.forceSimulation(nodes)
@@ -181,10 +160,12 @@ window.drawCluster = function(data, idx) {
 
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
         d3.selectAll(".cluster-pop").remove();
-        const pop = d3.select("#map-frame").append("div").attr("class", "cluster-pop")
+        d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                   <strong>${d.data[idx.prod]}</strong><br><b>Date:</b> ${d.data[idx.date]}<br><b>Value:</b> $${d.data[idx.val]}`);
+                   <strong>${d.data[idx.prod]}</strong><br>
+                   <b>Date:</b> ${d.data[idx.date] || "N/A"}<br>
+                   <b>Value:</b> $${d.data[idx.val]}`);
     });
 
     sim.on("tick", () => {
