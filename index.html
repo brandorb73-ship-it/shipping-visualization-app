@@ -331,19 +331,31 @@ function deleteReport(id) {
         drawTable();
     }
 }
-        async function initViz(url, title) {
-            document.getElementById('list-header').style.display = 'none';
-            document.getElementById('list-view').style.display = 'none';
-            document.getElementById('viz-header-ui').style.display = 'flex';
-            document.getElementById('viz-container').style.display = 'flex';
-            const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
-            try {
-                const res = await fetch(csvUrl);
-                const text = await res.text();
-                window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
-                window.populateFilters(); window.recomputeViz();
-            } catch(e) { alert("Error loading data. Check CSV URL."); }
+window.initViz = function(url, name) {
+    document.getElementById('viz-title').innerText = name;
+    document.getElementById('loader').style.display = 'flex';
+    
+    // Use PapaParse with explicit configuration to ensure it splits columns correctly
+    Papa.parse(url, {
+        download: true,
+        header: false, // We handle headers manually for better control
+        skipEmptyLines: true,
+        complete: function(results) {
+            document.getElementById('loader').style.display = 'none';
+            if (results.data && results.data.length > 1) {
+                window.rawData = results.data;
+                window.populateFilters();
+                window.recomputeViz();
+            } else {
+                alert("Error: The CSV file appears to be empty or invalid.");
+            }
+        },
+        error: function(err) {
+            document.getElementById('loader').style.display = 'none';
+            alert("Error loading data: " + err.message);
         }
+    });
+};
         function openMod() { document.getElementById('add-modal').style.display = 'flex'; }
     </script>
 </body>
