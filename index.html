@@ -71,25 +71,25 @@
     <style>
 /* Logo Tile Background */
 .logo-slot { 
-    width: 220px; /* Constrained width for sidebar */
-    height: 80px;
-    margin: 20px auto; /* Centered in sidebar */
-    background: #ffffff; 
+    width: 200px; /* Fixed width to fit inside 260px sidebar with padding */
+    height: 100px;
+    background: #ffffff !important; 
+    margin: 20px auto; 
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px; /* Rounded tile look */
-    padding: 10px;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     box-sizing: border-box;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .logo-slot img { 
     max-width: 100%; 
     max-height: 100%; 
-    object-fit: contain;
+    object-fit: contain; /* Prevents stretching */
+    display: block;
 }
-
     /* Toggle Switches for Cluster */
     .viz-controls {
         padding: 10px 20px;
