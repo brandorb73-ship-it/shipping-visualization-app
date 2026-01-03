@@ -1,11 +1,16 @@
 /**
- * BRANDORB VISUALS - DATE FIX & STABLE STRAIGHT PATHS
+ * BRANDORB VISUALS - STABLE RECOVERY VERSION
  */
 window.clusterMode = 'COUNTRY';
 
+// FUZZY & AGGRESSIVE HEADER SEARCH
 function getIdx(headers, targets) {
-    // Aggressive cleaning: Remove non-printable characters and spaces
-    const cleanHeaders = headers.map(h => h ? h.replace(/[^\x20-\x7E]/g, "").trim().toLowerCase() : "");
+    if (!headers) return -1;
+    // Clean headers: remove hidden characters, trim, and lowercase
+    const cleanHeaders = headers.map(h => 
+        String(h).replace(/[^\x20-\x7E]/g, "").trim().toLowerCase()
+    );
+    
     for (let t of targets) {
         const target = t.toLowerCase();
         const found = cleanHeaders.indexOf(target);
@@ -15,7 +20,11 @@ function getIdx(headers, targets) {
 }
 
 window.recomputeViz = function() {
-    if (!window.rawData || window.rawData.length < 2) return;
+    if (!window.rawData || window.rawData.length < 2) {
+        const frame = document.getElementById('map-frame');
+        frame.innerHTML = `<div style="padding:20px; color:red;">Data Source Error: Please check CSV format.</div>`;
+        return;
+    }
     
     const h = window.rawData[0];
     const search = document.getElementById('ent-search').value.toLowerCase();
@@ -32,19 +41,27 @@ window.recomputeViz = function() {
         lon1:getIdx(h, ["Origin longitude"]),
         lat2:getIdx(h, ["Destination latitude"]),
         lon2:getIdx(h, ["Destination longitude"]),
-        date:getIdx(h, ["Date", "Shipment Date", "YYYY-MM-DD"]),
+        date:getIdx(h, ["Date", "YYYY-MM-DD", "Shipment Date"]),
         qty: getIdx(h, ["Quantity"]),
         val: getIdx(h, ["Value(USD)", "Value"]),
         mode:getIdx(h, ["Mode of Transport"]),
         oPort: getIdx(h, ["Origin Port"]),
-        dPort: getIdx(h, ["Destination Port"])
+        dPort: getIdx(h, ["Destination Port"]),
+        col: getIdx(h, ["COLOR"])
     };
+
+    // CRITICAL CHECK: If Exporter column isn't found, stop and alert
+    if (idx.exp === -1) {
+        console.error("Column 'Exporter' not found. Headers seen:", h);
+        document.getElementById('map-frame').innerHTML = `<div style="padding:20px;"><b>Error:</b> Column "Exporter" not found in CSV.</div>`;
+        return;
+    }
 
     const filteredRows = window.rawData.slice(1).filter(r => {
         if (!r[idx.exp]) return false;
         const oMatch = origF === 'All' || r[idx.oC] === origF;
         const dMatch = destF === 'All' || r[idx.dC] === destF;
-        const sMatch = (r[idx.exp] + r[idx.imp] + (r[idx.prod]||"")).toLowerCase().includes(search);
+        const sMatch = (r[idx.exp] + (r[idx.imp]||"") + (r[idx.prod]||"")).toLowerCase().includes(search);
         return oMatch && dMatch && sMatch;
     });
 
@@ -80,9 +97,9 @@ window.drawMap = function(groups, idx) {
         const p2 = [parseFloat(f[idx.lat2]), parseFloat(f[idx.lon2])];
 
         if (!isNaN(p1[0]) && !isNaN(p2[0])) {
-            // STRAIGHT LINE WITH ANT PATH
+            // STRAIGHT LINE ANT PATH
             const ant = L.polyline.antPath([p1, p2], { 
-                color: '#38bdf8', weight: 3, delay: 1000 
+                color: f[idx.col] || '#0ea5e9', weight: 3, delay: 1000 
             }).addTo(window.LMap);
 
             const rows = group.map(s => `
@@ -97,13 +114,13 @@ window.drawMap = function(groups, idx) {
             ant.bindPopup(`
                 <div class="map-popup-container">
                     <div style="font-size:12px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:5px;">
-                        <b>Exporter:</b> ${f[idx.exp]}<br>
-                        <b>Importer:</b> ${f[idx.imp]}<br>
-                        <b>Route:</b> ${f[idx.oC]} → ${f[idx.dC]}
+                        <b>Exporter:</b> ${f[idx.exp]} (${f[idx.oC]})<br>
+                        <b>Importer:</b> ${f[idx.imp]} (${f[idx.dC]})<br>
+                        <b>Ports:</b> ${f[idx.oPort] || 'N/A'} → ${f[idx.dPort] || 'N/A'}
                     </div>
                     <div class="popup-scroll">
                         <table class="popup-table">
-                            <thead><tr><th>Date</th><th>Quantity</th><th>Value(USD)</th><th>PRODUCT</th><th>Mode</th></tr></thead>
+                            <thead><tr><th>Date</th><th>Quantity</th><th>Value (USD)</th><th>PRODUCT</th><th>Mode</th></tr></thead>
                             <tbody>${rows}</tbody>
                         </table>
                     </div>
