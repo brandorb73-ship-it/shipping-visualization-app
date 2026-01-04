@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrandOrb - Ranking Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --brand-blue: #0ea5e9; --brand-dark: #1e293b; --bg: #f8fafc; --border: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 30px; color: var(--brand-dark); }
+
+      <div class="main-nav">
+    <div class="nav-brand">BRANDORB <span>INTELLIGENCE</span></div>
+    <div class="nav-links">
+        <a href="index.html" id="nav-map"><i class="fas fa-map-marked-alt"></i> Visual Analysis</a>
+        <a href="RankingIndex.html" id="nav-rank"><i class="fas fa-list-ol"></i> Ranking Reports</a>
+    </div>
+</div>
+
+<style>
+    .main-nav {
+        background: #1e293b;
+        color: white;
+        padding: 0 30px;
+        height: 60px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Inter', sans-serif;
+    }
+    .nav-brand { font-weight: 800; letter-spacing: 1px; }
+    .nav-brand span { color: #0ea5e9; font-weight: 300; }
+    .nav-links { display: flex; gap: 20px; }
+    .nav-links a {
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+    
+    /* Highlight the active page */
+    #nav-map.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
+    #nav-rank.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
+</style>
+        
+        /* Header & Actions */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 20px; flex-wrap: wrap; }
+        .controls-left { display: flex; align-items: center; gap: 20px; }
+        .action-btns { display: flex; gap: 10px; }
+        
+        /* Buttons */
+        .btn-action { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-action:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn-primary { background: var(--brand-blue); color: white; border: none; }
+        .btn-primary:hover { background: #0284c7; }
+
+        /* Toggle & Search */
+        .toggle-container { display: flex; background: #e2e8f0; padding: 4px; border-radius: 8px; }
+        .toggle-btn { border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; background: transparent; color: #64748b; }
+        .toggle-btn.active { background: white; color: var(--brand-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .search-box { position: relative; flex-grow: 1; max-width: 400px; }
+        .search-box i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .search-box input { width: 100%; padding: 12px 12px 12px 40px; border: 1px solid var(--border); border-radius: 8px; outline: none; font-size: 14px; }
+
+        /* Table Design */
+        .report-card { background: white; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8fafc; padding: 16px; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid var(--border); text-align: left; cursor: pointer; user-select: none; }
+        th:hover { background: #f1f5f9; color: var(--brand-blue); }
+        td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+        
+        /* Footer/Totals */
+        tfoot tr { background: #f8fafc; border-top: 2px solid var(--border); font-weight: 700; }
+        tfoot td { padding: 18px 16px; }
+
+        /* Status & Icons */
+        .risk-badge { padding: 4px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .risk-high { background: #fee2e2; color: #b91c1c; }
+        .risk-medium { background: #fef3c7; color: #92400e; }
+        .risk-low { background: #dcfce7; color: #15803d; }
+        .sort-icon { font-size: 10px; margin-left: 5px; color: #cbd5e1; }
+        th.active-sort { color: var(--brand-blue); }
+        .loading { padding: 60px; text-align: center; color: #94a3b8; }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <div class="controls-left">
+            <h2 style="margin:0;"><i class="fas fa-medal" style="color: #eab308;"></i> Ranking</h2>
+            <div class="toggle-container">
+                <button id="btn-exp" class="toggle-btn active" onclick="switchReport('EXPORTER')">Exporters</button>
+                <button id="btn-imp" class="toggle-btn" onclick="switchReport('IMPORTER')">Importers</button>
+            </div>
+        </div>
+        
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="rank-search" placeholder="Search by name or country..." onkeyup="renderRanking()">
+        </div>
+
+        <div class="action-btns">
+            <button class="btn-action" onclick="downloadCSV()"><i class="fas fa-file-csv"></i> CSV</button>
+            <button class="btn-action btn-primary" onclick="exportPDF()"><i class="fas fa-file-pdf"></i> PDF Report</button>
+        </div>
+    </div>
+
+    <div class="report-card" id="print-area">
+        <div id="table-container">
+            <div class="loading"><i class="fas fa-spinner fa-spin"></i> Initializing Ranking Data...</div>
+        </div>
+    </div>
+
+    <script src="RankingVisuals.js"></script>
+    <script>
+        const RANKING_URL = "YOUR_GOOGLE_SHEET_CSV_URL"; // Replace with your URL
+
+        window.onload = () => {
+            Papa.parse(RANKING_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    window.rankingData = results.data;
+                    renderRanking();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
