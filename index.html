@@ -193,16 +193,46 @@
 
     <div id="app-container">
 <aside id="sidebar">
-    <div class="logo-slot" id="sidebar-logo">
-        <div>BrandOrb</div>
+   <div class="sidebar">
+    <div id="logo-container" class="logo-box">
+        <input type="file" id="logo-upload" style="display:none" accept="image/*" onchange="handleLogo(this)">
+        <div onclick="document.getElementById('logo-upload').click()" style="cursor:pointer; font-size:12px; color:#64748b;">
+            <i class="fas fa-camera"></i> Upload BrandOrb Logo
+        </div>
     </div>
 
-    <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')">
-        <i class="fas fa-route"></i> ROUTE MAPS
+    <nav>
+        <div class="nav-item active" onclick="showTab('MAP')"><i class="fas fa-route"></i> Route Maps</div>
+        <div class="nav-item" onclick="showTab('CLUSTER')"><i class="fas fa-network-wired"></i> Cluster Graphs</div>
+        
+        <div class="nav-section-title">RANKING REPORTS</div>
+        <div id="ranking-reports-list">
+            </div>
+        
+        <button class="add-report-btn" onclick="openReportModal()">
+            <i class="fas fa-plus-circle"></i> Add Ranking Report
+        </button>
+    </nav>
+</div>
+
+<div id="report-modal" class="modal">
+    <div class="modal-content">
+        <h3>Publish New Ranking Report</h3>
+        <label>Report Type</label>
+        <select id="modal-type">
+            <option value="EXPORTER">Exporter Ranking</option>
+            <option value="IMPORTER">Importer Ranking</option>
+        </select>
+        <label>Google Sheet CSV Link</label>
+        <input type="text" id="modal-csv" placeholder="Paste CSV URL here...">
+        <label>Report Name</label>
+        <input type="text" id="modal-name" placeholder="e.g., Electronics Ranking 2024">
+        <div class="modal-actions">
+            <button onclick="closeReportModal()">Cancel</button>
+            <button class="btn-primary" onclick="publishReport()">Publish Report</button>
+        </div>
     </div>
-    <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')">
-        <i class="fas fa-project-diagram"></i> CLUSTER GRAPHS
-    </div>
+</div>
 </aside>
 
         <main id="main-content">
