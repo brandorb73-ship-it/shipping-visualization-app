@@ -8,18 +8,16 @@ const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     
     const strVal = String(dateValue).trim();
-    // 1. Try to match YYYY-MM-DD pattern directly from string
+    // Directly extracts YYYY-MM-DD from the string
     const regex = /(\d{4})-(\d{2})-(\d{2})/;
     const match = strVal.match(regex);
+    
     if (match) return match[0];
 
-    // 2. Fallback to JS Date parsing
+    // Fallback for other valid date objects
     let d = new Date(dateValue);
     if (!isNaN(d.getTime())) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
+        return d.toISOString().split('T')[0];
     }
 
     return strVal; 
@@ -113,7 +111,7 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                <td>${s[idx("Date")] || 'N/A'}</td>
+                <td>${formatDate(s[idx("Date")])}</td>
                 <td>${s[idx("Quantity")] || '-'}</td>
                 <td>$${s[idx("Value(USD)")]}</td>
                 <td style="word-break: break-all; min-width: 140px; font-size: 10px;">${s[idx("PRODUCT")]}</td>
@@ -187,7 +185,7 @@ window.drawCluster = function(data, idx) {
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date: ${formatDate(d.data[idx("Date")])}<br>Value: $${d.data[idx("Value(USD)")]}`);
+                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date:${formatDate(s[idx("Date")])}</ <br>Value: $${d.data[idx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
