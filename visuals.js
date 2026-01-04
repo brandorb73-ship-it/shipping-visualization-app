@@ -172,49 +172,45 @@ window.drawCluster = function(data, idx) {
     const link = g.append("g").selectAll("line").data(links).enter().append("line")
         .attr("stroke", d => d.type === 'link' ? "#e2e8f0" : "#94a3b8").attr("stroke-width", 2);
 
-    // Create the node groups
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g")
         .call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
         .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
 
-    // Draw the circles
+    // Circles
     node.append("circle")
         .attr("r", d => d.type === 'parent' ? 22 : 14)
         .attr("fill", d => d.type === 'parent' ? '#1e293b' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'))
-        .attr("stroke", "#fff")
-        .attr("stroke-width", 2);
+        .attr("stroke", "#fff").attr("stroke-width", 2);
 
-    // ADD ICONS TO CENTER
+    // FIXED: Centered Icons
     node.append("foreignObject")
-        .attr("x", d => d.type === 'parent' ? -11 : -8) // Centering the icon
-        .attr("y", d => d.type === 'parent' ? -11 : -9)
-        .attr("width", 22)
-        .attr("height", 22)
+        .attr("width", 30)
+        .attr("height", 30)
+        // Center calculation: (width / -2) for horizontal and (height / -2) for vertical centering
+        .attr("x", -15) 
+        .attr("y", -15)
         .style("pointer-events", "none")
         .html(d => {
-            let iconClass = "fa-globe"; // Default for Country
-            if (d.type === 'exp') iconClass = "fa-building"; // Exporter
-            if (d.type === 'imp') iconClass = "fa-store";    // Importer
-            
-            return `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+            let iconClass = "fa-globe"; 
+            if (d.type === 'exp') iconClass = "fa-building"; 
+            if (d.type === 'imp') iconClass = "fa-store";    
+            return `<div style="display:flex; align-items:center; justify-content:center; width:30px; height:30px;">
                         <i class="fas ${iconClass}" style="color:white; font-size:${d.type==='parent'?'16px':'12px'};"></i>
                     </div>`;
         });
 
-    // Add labels below circles
-    node.append("text")
-        .text(d => d.id)
-        .attr("y", 35)
-        .attr("text-anchor", "middle")
-        .style("font-size", "9px")
-        .style("font-weight", "bold");
+    node.append("text").text(d => d.id).attr("y", 35).attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "bold");
 
+    // FIXED: Added Quantity to Popup
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date: ${formatDate(d.data[idx("Date")])}<br>Value: $${d.data[idx("Value(USD)")]}`);
+                <strong>${d.data[idx("PRODUCT")]}</strong><br>
+                Date: ${formatDate(d.data[idx("Date")])}<br>
+                Qty: ${d.data[idx("Quantity")] || '-'}<br>
+                Value: $${d.data[idx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
