@@ -103,7 +103,7 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                <td>${formatDate(s[idx("Date")])}</td>
+                 <td>${s[idx("Date")] || 'YYYY-MM-DD'}</td>
                 <td>${s[idx("Quantity")] || '-'}</td>
                 <td>$${s[idx("Value(USD)")]}</td>
                 <td>${s[idx("PRODUCT")]}</td>
@@ -119,8 +119,7 @@ window.drawMap = function(groups, idx) {
                         <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th><th>Mode</th></tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
-                </div>
-            `);
+         </div>`, { maxWidth: 400 });
         }
     });
 };
