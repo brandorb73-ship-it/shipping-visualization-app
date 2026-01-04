@@ -74,48 +74,61 @@ window.drawMap = function(groups, idx) {
     window.LMap = L.map('map-frame').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
+    // Helper to find index safely
+    const getIdx = (name) => window.rawData[0].findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
+        const found = window.rawData[0].findIndex(h => h.trim().toLowerCase() === name.toLowerCase());
+        return found;
+    };
+
     groups.forEach(group => {
         const f = group[0];
-        const lat1 = parseFloat(f[idx("Origin latitude")]), lon1 = parseFloat(f[idx("Origin longitude")]);
-        const lat2 = parseFloat(f[idx("Destination latitude")]), lon2 = parseFloat(f[idx("Destination longitude")]);
+        const lat1 = parseFloat(f[getIdx("Origin latitude")]), lon1 = parseFloat(f[getIdx("Origin longitude")]);
+        const lat2 = parseFloat(f[getIdx("Destination latitude")]), lon2 = parseFloat(f[getIdx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
-            // SMOOTH ARC CALCULATION
             const p1 = [lat1, lon1], p2 = [lat2, lon2];
-            const offsetX = (p2[1] - p1[1]) * 0.2, offsetY = (p1[0] - p2[0]) * 0.2;
-            const mid = [(p1[0] + p2[0]) / 2 + offsetY, (p1[1] + p2[1]) / 2 + offsetX];
             
-            const latlngs = L.curve(['M', p1, 'Q', mid, p2]).getPath()
+            // Calculate a control point for a smooth curve (not a sharp bend)
+            const midLat = (lat1 + lat2) / 2;
+            const midLon = (lon1 + lon2) / 2;
+            const bendFactor = 0.15; // Adjust for more/less curve
+            const cp = [
+                midLat + (lon2 - lon1) * bendFactor,
+                midLon - (lat2 - lat1) * bendFactor
+            ];
+
+            const latlngs = L.curve(['M', p1, 'Q', cp, p2]).getPath()
                              .filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
             
             const ant = L.polyline.antPath(latlngs, { 
-                color: f[idx("COLOR")] || '#0ea5e9', 
-                weight: 3, delay: 1000 
+                color: f[getIdx("COLOR")] || '#0ea5e9', 
+                weight: 3, 
+                delay: 1000,
+                paused: false,
+                reverse: false
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `
                 <tr>
-                    <td>${s[idx("Date")]}</td>
-                    <td>${s[idx("Quantity")]}</td>
-                    <td>$${s[idx("Value(USD)")]}</td>
-                    <td>${s[idx("PRODUCT")]}</td>
-                    <td>${s[idx("Mode of Transport")] || 'N/A'}</td>
+                    <td>${s[getIdx("Date")] || 'N/A'}</td>
+                    <td>${s[getIdx("Quantity")]}</td>
+                    <td>$${s[getIdx("Value(USD)")]}</td>
+                    <td>${s[getIdx("PRODUCT")]}</td>
+                    <td>${s[getIdx("Mode of Transport")] || 'N/A'}</td>
                 </tr>`).join('');
 
             ant.bindPopup(`
                 <div style="width:380px; font-size:12px;">
-                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    <b>Exporter:</b> ${f[getIdx("Exporter")]}<br>
+                    <b>Importer:</b> ${f[getIdx("Importer")]}<br>
                     <table class="popup-table">
-                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Prod</th><th>Mode</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>PRODUCT</th><th>Mode</th></tr></thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>`, { maxWidth: 400 });
         }
     });
 };
-
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
@@ -173,7 +186,9 @@ window.drawCluster = function(data, idx) {
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                   <strong>${d.data[idx("PRODUCT")]}</strong><br>Date: ${d.data[idx("Date")]}<br>Value: $${d.data[idx("Value(USD)")]}`);
+                   <strong>${d.data[getIdx("PRODUCT")]}</strong><br>
+                   Date: ${d.data[getIdx("Date")] || 'N/A'}<br>
+                   Value: $${d.data[getIdx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
