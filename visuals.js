@@ -217,4 +217,70 @@ window.drawCluster = function(data, idx) {
         link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
         node.attr("transform", d=>`translate(${d.x},${d.y})`);
     });
+
+    // Logo Management
+function handleLogo(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            localStorage.setItem('brandorb_logo', e.target.result);
+            displayLogo(e.target.result);
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+function displayLogo(data) {
+    document.getElementById('logo-container').innerHTML = `<img src="${data}" style="max-width:100%; max-height:50px; object-fit:contain;">`;
+}
+
+// Modal & Publishing Logic
+function openReportModal() { document.getElementById('report-modal').style.display = 'flex'; }
+function closeReportModal() { document.getElementById('report-modal').style.display = 'none'; }
+
+function publishReport() {
+    const report = {
+        id: Date.now(),
+        type: document.getElementById('modal-type').value,
+        csv: document.getElementById('modal-csv').value,
+        name: document.getElementById('modal-name').value
+    };
+    if (!report.csv || !report.name) return alert("Please fill all fields");
+
+    let reports = JSON.parse(localStorage.getItem('published_reports') || '[]');
+    reports.push(report);
+    localStorage.setItem('published_reports', JSON.stringify(reports));
+    
+    loadPublishedReports();
+    closeReportModal();
+}
+
+function deleteReport(id, event) {
+    event.stopPropagation(); // Prevents opening the report when clicking delete
+    let reports = JSON.parse(localStorage.getItem('published_reports') || '[]');
+    reports = reports.filter(r => r.id !== id);
+    localStorage.setItem('published_reports', JSON.stringify(reports));
+    loadPublishedReports();
+}
+
+function loadPublishedReports() {
+    const reports = JSON.parse(localStorage.getItem('published_reports') || '[]');
+    const list = document.getElementById('ranking-reports-list');
+    list.innerHTML = reports.map(r => `
+        <div class="nav-item ranking-item" onclick="viewRanking('${encodeURIComponent(r.csv)}', '${r.type}')">
+            <span><i class="fas fa-file-invoice"></i> ${r.name}</span>
+            <i class="fas fa-trash delete-icon" onclick="deleteReport(${r.id}, event)"></i>
+        </div>
+    `).join('');
+}
+
+function viewRanking(csv, type) {
+    window.location.href = `RankingIndex.html?csv=${csv}&type=${type}`;
+}
+
+// Run on Load
+window.addEventListener('DOMContentLoaded', () => {
+    const logo = localStorage.getItem('brandorb_logo');
+    if (logo) displayLogo(logo);
+    loadPublishedReports();
+});
 };
