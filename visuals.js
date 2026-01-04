@@ -110,18 +110,20 @@ window.drawMap = function(groups, idx) {
                 <td>${s[idx("Mode of Transport")] || 'N/A'}</td>
             </tr>`).join('');
 
-            ant.bindPopup(`<div style="width:380px; font-size:11px; max-height:250px; overflow-y:auto;">
-                <b>Exporter:</b> ${f[idx("Exporter")]}<br>
-                <b>Importer:</b> ${f[idx("Importer")]}<br>
-                <table class="popup-table">
-                    <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>PRODUCT</th><th>Mode</th></tr></thead>
-                    <tbody>${tableRows}</tbody>
-                </table>
-            </div>`, { maxWidth: 400 });
+               ant.bindPopup(`
+                <div style="width:350px; font-family:sans-serif;">
+                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                    <b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}
+                    <table class="popup-table">
+                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th><th>Mode</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            `);
         }
     });
 };
-
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
