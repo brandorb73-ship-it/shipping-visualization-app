@@ -3,22 +3,23 @@
  */
 window.clusterMode = 'COUNTRY'; 
 
-// AGGRESSIVE DATE NORMALIZER
+// REFINED DATE NORMALIZER
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     
+    // Check if it's already a string in YYYY-MM-DD format
+    const strVal = String(dateValue).trim();
+    const regex = /(\d{4})-(\d{2})-(\d{2})/;
+    const match = strVal.match(regex);
+    if (match) return match[0];
+
+    // Try standard JS parsing
     let d = new Date(dateValue);
-    
-    // Fallback for strings that Date() might miss or weird spreadsheet formats
-    if (isNaN(d.getTime())) {
-        const str = String(dateValue).trim();
-        // Regex to catch YYYY-MM-DD even if embedded in a string
-        const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (match) return match[0];
-        return str; 
+    if (!isNaN(d.getTime())) {
+        return d.toISOString().split('T')[0];
     }
-    
-    return d.toISOString().split('T')[0];
+
+    return strVal; // Fallback to raw string if all else fails
 };
 
 window.downloadPDF = function() {
@@ -88,41 +89,57 @@ window.drawMap = function(groups, idx) {
 
     groups.forEach((group, gIdx) => {
         const f = group[0];
-        let lat1 = parseFloat(f[idx("Origin latitude")]), lon1 = parseFloat(f[idx("Origin longitude")]);
-        let lat2 = parseFloat(f[idx("Destination latitude")]), lon2 = parseFloat(f[idx("Destination longitude")]);
+        const lat1 = parseFloat(f[idx("Origin latitude")]), lon1 = parseFloat(f[idx("Origin longitude")]);
+        const lat2 = parseFloat(f[idx("Destination latitude")]), lon2 = parseFloat(f[idx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
-            // LINE OFFSET CALCULATION: Moves lines apart slightly based on their group index
-            const offset = gIdx * 0.4; // Adjust this number to increase/decrease distance
-            const latL1 = lat1 + offset, lonL1 = lon1 + offset;
-            const latL2 = lat2 + offset, lonL2 = lon2 + offset;
+            // SMOOTH CURVE TO PREVENT OVERLAP (All start/end at same point)
+            const p1 = [lat1, lon1], p2 = [lat2, lon2];
+            
+            // Increment bend based on group index so routes between same points don't overlap
+            const bendFactor = 0.15 + (gIdx * 0.1); 
+            const offsetX = (p2[1] - p1[1]) * bendFactor;
+            const offsetY = (p1[0] - p2[0]) * bendFactor;
+            const mid = [(p1[0] + p2[0]) / 2 + offsetY, (p1[1] + p2[1]) / 2 + offsetX];
+            
+            const latlngs = L.curve(['M', p1, 'Q', mid, p2]).getPath()
+                             .filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
 
-            const ant = L.polyline.antPath([[latL1, lonL1], [latL2, lonL2]], { 
+            const ant = L.polyline.antPath(latlngs, { 
                 color: f[idx("COLOR")] || '#0ea5e9', 
                 weight: 3, delay: 1000 
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                 <td>${s[idx("Date")] || 'YYYY-MM-DD'}</td>
+                <td>${formatDate(s[idx("Date")])}</td>
                 <td>${s[idx("Quantity")] || '-'}</td>
                 <td>$${s[idx("Value(USD)")]}</td>
-                <td>${s[idx("PRODUCT")]}</td>
+                <td style="word-break: break-word; min-width: 120px;">${s[idx("PRODUCT")]}</td>
                 <td>${s[idx("Mode of Transport")] || 'N/A'}</td>
             </tr>`).join('');
 
-               ant.bindPopup(`
-                <div style="width:350px; font-family:sans-serif;">
+            ant.bindPopup(`
+                <div style="width:380px; font-family:sans-serif; max-height:300px; overflow-y:auto;">
                     <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
                     <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}
-                    <table class="popup-table">
-                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th><th>Mode</th></tr></thead>
+                    <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    <table class="popup-table" style="width:100%; table-layout: fixed; border-collapse: collapse; margin-top:8px;">
+                        <thead>
+                            <tr>
+                                <th style="width:80px;">Date</th>
+                                <th style="width:40px;">Qty</th>
+                                <th style="width:60px;">Value</th>
+                                <th>PRODUCT</th>
+                                <th style="width:50px;">Mode</th>
+                            </tr>
+                        </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
-         </div>`, { maxWidth: 400 });
+                </div>`, { maxWidth: 400 });
         }
     });
 };
+
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
