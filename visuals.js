@@ -70,62 +70,57 @@ window.recomputeViz = function() {
     }
 };
 
-.logo-slot { 
-    width: 200px; /* Fixed width to fit inside 260px sidebar with padding */
-    height: 100px;
-    background: #ffffff !important; 
-    margin: 20px auto; 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    box-sizing: border-box;
-}
+window.drawMap = function(groups, idx) {
+    window.LMap = L.map('map-frame').setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
-.logo-slot img { 
-    max-width: 100%; 
-    max-height: 100%; 
-    object-fit: contain; /* Prevents stretching */
-    display: block;
-}
+    groups.forEach(group => {
+        const f = group[0];
+        const lat1 = parseFloat(f[idx("Origin latitude")]), lon1 = parseFloat(f[idx("Origin longitude")]);
+        const lat2 = parseFloat(f[idx("Destination latitude")]), lon2 = parseFloat(f[idx("Destination longitude")]);
+
+        if (!isNaN(lat1) && !isNaN(lat2)) {
+            // SMOOTH ARC CALCULATION
+            const p1 = [lat1, lon1], p2 = [lat2, lon2];
+            const offsetX = (p2[1] - p1[1]) * 0.2, offsetY = (p1[0] - p2[0]) * 0.2;
+            const mid = [(p1[0] + p2[0]) / 2 + offsetY, (p1[1] + p2[1]) / 2 + offsetX];
+            
+            const latlngs = L.curve(['M', p1, 'Q', mid, p2]).getPath()
+                             .filter(item => Array.isArray(item)).map(c => L.latLng(c[0], c[1]));
+            
+            const ant = L.polyline.antPath(latlngs, { 
+                color: f[idx("COLOR")] || '#0ea5e9', 
+                weight: 3, delay: 1000 
+            }).addTo(window.LMap);
+
+            const tableRows = group.map(s => `
+                <tr>
+                    <td>${s[idx("Date")]}</td>
+                    <td>${s[idx("Quantity")]}</td>
+                    <td>$${s[idx("Value(USD)")]}</td>
+                    <td>${s[idx("PRODUCT")]}</td>
+                    <td>${s[idx("Mode of Transport")] || 'N/A'}</td>
+                </tr>`).join('');
+
+            ant.bindPopup(`
+                <div style="width:380px; font-size:12px;">
+                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                    <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    <table class="popup-table">
+                        <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Prod</th><th>Mode</th></tr></thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`, { maxWidth: 400 });
+        }
+    });
+};
 
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
     const svg = d3.select("#map-frame").append("svg").attr("width", "100%").attr("height", "100%");
     const g = svg.append("g");
-    
-    // ... (keep simulation logic same) ...
-
-    const node = g.append("g").selectAll("g").data(nodes).enter().append("g")
-        .call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended));
-
-    node.append("circle").attr("r", d => d.type === 'parent' ? 24 : 18)
-        .attr("fill", d => d.type === 'parent' ? '#1e293b' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'));
-
-    // FIX: Centering Icons
-    node.append("text")
-        .attr("class", "fas")
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "central") // Perfectly centers vertically
-        .style("fill", "white")
-        .style("font-size", "14px")
-        .text(d => d.type === 'parent' ? '\uf0ac' : (d.type === 'exp' ? '\uf1ad' : '\uf54e')); 
-
-    node.append("text").text(d => d.id).attr("y", 35).attr("text-anchor", "middle").style("font-size", "10px");
-
-    link.filter(d => d.type === 'trade').on("click", (e, d) => {
-        d3.selectAll(".cluster-pop").remove();
-        d3.select("#map-frame").append("div").attr("class", "cluster-pop")
-            .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
-            .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                   <strong>${d.data[idx("PRODUCT")]}</strong><br>
-                   Date: ${cleanDate(d.data[idx("Date")])}<br>
-                   Value: $${d.data[idx("Value(USD)")]}`);
-    });
-};
     svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
 
     let nodes = [], links = [], nodeSet = new Set();
