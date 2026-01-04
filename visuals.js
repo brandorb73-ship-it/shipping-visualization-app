@@ -111,7 +111,7 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                <td>${formatDate(s[idx("Date")])}</td>
+                <td>Date:</b> ${s[idx("Date")]}<td>
                 <td>${s[idx("Quantity")] || '-'}</td>
                 <td>$${s[idx("Value(USD)")]}</td>
                 <td style="word-break: break-all; min-width: 140px; font-size: 10px;">${s[idx("PRODUCT")]}</td>
@@ -185,7 +185,7 @@ window.drawCluster = function(data, idx) {
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date:${formatDate(s[idx("Date")])}</ <br>Value: $${d.data[idx("Value(USD)")]}`);
+                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date:${d.data[idx("Date")]}}</<br>Value: $${d.data[idx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
