@@ -142,6 +142,45 @@
     </style>
 </head>
 <body>
+
+    <div class="main-nav">
+    <div class="nav-brand">BRANDORB <span>INTELLIGENCE</span></div>
+    <div class="nav-links">
+        <a href="index.html" id="nav-map"><i class="fas fa-map-marked-alt"></i> Visual Analysis</a>
+        <a href="RankingIndex.html" id="nav-rank"><i class="fas fa-list-ol"></i> Ranking Reports</a>
+    </div>
+</div>
+
+<style>
+    .main-nav {
+        background: #1e293b;
+        color: white;
+        padding: 0 30px;
+        height: 60px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Inter', sans-serif;
+    }
+    .nav-brand { font-weight: 800; letter-spacing: 1px; }
+    .nav-brand span { color: #0ea5e9; font-weight: 300; }
+    .nav-links { display: flex; gap: 20px; }
+    .nav-links a {
+        color: #94a3b8;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .nav-links a:hover, .nav-links a.active { color: white; }
+    
+    /* Highlight the active page */
+    #nav-map.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
+    #nav-rank.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
+</style>
     <div id="login-scr" style="position:fixed; inset:0; background:var(--navy); display:flex; align-items:center; justify-content:center; z-index:9999;">
         <div style="background:white; padding:40px; border-radius:12px; width:300px; text-align:center;">
             <div id="login-logo-preview" style="margin-bottom: 20px;"><h2>BrandOrb</h2></div>
