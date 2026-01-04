@@ -8,16 +8,18 @@ const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     
     const strVal = String(dateValue).trim();
-    // Directly extracts YYYY-MM-DD from the string
+    // 1. Try to match YYYY-MM-DD pattern directly from string
     const regex = /(\d{4})-(\d{2})-(\d{2})/;
     const match = strVal.match(regex);
-    
     if (match) return match[0];
 
-    // Fallback for other valid date objects
+    // 2. Fallback to JS Date parsing
     let d = new Date(dateValue);
     if (!isNaN(d.getTime())) {
-        return d.toISOString().split('T')[0];
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 
     return strVal; 
@@ -111,7 +113,7 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                <td>Date:</b> ${s[idx("Date")]}<td>
+                <td>${formatDate(s[idx("Date")])}</td>
                 <td>${s[idx("Quantity")] || '-'}</td>
                 <td>$${s[idx("Value(USD)")]}</td>
                 <td style="word-break: break-all; min-width: 140px; font-size: 10px;">${s[idx("PRODUCT")]}</td>
@@ -121,9 +123,9 @@ window.drawMap = function(groups, idx) {
             ant.bindPopup(`
                 <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
                     <div style="margin-bottom:8px;">
-                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
                     <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
                     <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
                         <thead>
@@ -185,7 +187,7 @@ window.drawCluster = function(data, idx) {
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date:${d.data[idx("Date")]}}</<br>Value: $${d.data[idx("Value(USD)")]}`);
+                <strong>${d.data[idx("PRODUCT")]}</strong><br>Date: ${formatDate(d.data[idx("Date")])}<br>Value: $${d.data[idx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
