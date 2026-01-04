@@ -11,30 +11,32 @@
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100vw; font-family: 'Inter', sans-serif; background: var(--navy); overflow: hidden; }
         #app-container { width: 100vw; height: 100vh; background: var(--bg); display: flex; }
-        
         #sidebar { width: 260px; background: var(--navy); color: white; flex-shrink: 0; display: flex; flex-direction: column; }
-        
-        /* Fixed White Logo Tile */
-        .logo-slot { 
-            width: 100%;
-            height: 100px;
-            background: #ffffff !important; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px;
-            box-sizing: border-box;
-            border-bottom: 2px solid var(--border);
-        }
-        .logo-slot img { 
-            max-width: 90%; 
-            max-height: 80px; 
-            object-fit: contain;
-        }
-
         #main-content { flex-grow: 1; display: flex; flex-direction: column; width: calc(100vw - 260px); }
         header { background: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
-        .nav-item { padding: 15px 25px; cursor: pointer; color: #94a3b8; font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 10px; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .nav-item { 
+    padding: 15px 25px; 
+    cursor: pointer; 
+    color: #94a3b8; 
+    font-weight: 700; 
+    font-size: 11px; 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+}
+
+/* Red Delete Button Styling */
+.delete-btn {
+    background: #fee2e2;
+    color: #ef4444;
+    border: 1px solid #fecaca;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.delete-btn:hover { background: #ef4444; color: white; }
         .nav-item.active { color: var(--blue); background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--blue); }
         .btn-p { background: var(--navy); color: var(--blue); border: 1px solid var(--blue); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; }
         .input-s { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; outline: none; }
@@ -44,12 +46,81 @@
         td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
         #viz-container { display: none; flex-direction: column; height: 100%; width: 100%; }
         #map-frame { flex-grow: 1; background: #f1f5f9; position: relative; }
-        .delete-btn { background: #fee2e2; color: #ef4444; border: 1px solid #fecaca; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .popup-table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 10px; }
-        .popup-table th, .popup-table td { border: 1px solid #ddd; padding: 4px; }
-        .cluster-pop { position: absolute; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 2000; font-size: 12px; border: 1px solid #e2e8f0; }
-        .pop-close { position: absolute; top: 5px; right: 8px; cursor: pointer; font-weight: bold; }
+        .popup-table th, .popup-table td { border: 1px solid #ddd; padding: 4px; text-align: left; }
+        /* New Cluster Pop-up Style */
+        .cluster-pop { 
+    position: absolute; 
+    background: white; 
+    padding: 15px; 
+    border-radius: 8px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2); 
+    z-index: 2000; 
+    font-size: 12px;
+    border: 1px solid #e2e8f0;
+}
+.pop-close {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #64748b;
+} 
+    <style>
+    /* Fixed Logo Tile Background */
+    .logo-slot { 
+        width: 100%;
+        height: 100px; /* Fixed height for consistency */
+        background: #ffffff; /* Solid white tile */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 15px;
+        box-sizing: border-box;
+        padding: 10px;
+    }
+
+    .logo-slot img { 
+        max-width: 100%; 
+        max-height: 100%; 
+        object-fit: contain; /* Ensures logo fits without distortion */
+        filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .logo-slot div {
+        color: #0f172a;
+        font-weight: 800;
+        font-size: 20px;
+        letter-spacing: -0.5px;
+    }
+</style>
+
+    /* Toggle Switches for Cluster */
+    .viz-controls {
+        padding: 10px 20px;
+        display: flex;
+        gap: 10px;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .toggle-btn {
+        padding: 6px 12px;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 20px;
+        border: 1px solid #cbd5e1;
+        background: white;
+        cursor: pointer;
+    }
+    .toggle-btn.active {
+        background: #0f172a;
+        color: white;
+        border-color: #0f172a;
+    }
+
     </style>
 </head>
 <body>
@@ -57,20 +128,24 @@
         <div style="background:white; padding:40px; border-radius:12px; width:300px; text-align:center;">
             <div id="login-logo-preview" style="margin-bottom: 20px;"><h2>BrandOrb</h2></div>
             <input type="password" id="pass" class="input-s" placeholder="Access Key" style="width:100%; margin-bottom:15px;">
-            <div style="font-size: 10px; color: gray; margin-bottom: 5px; text-align: left;">Upload Logo:</div>
-            <input type="file" id="logo-upload" class="input-s" style="width:100%; margin-bottom:15px;" accept="image/*">
+            <div style="font-size: 10px; color: gray; margin-bottom: 5px; text-align: left;">Upload Logo (Optional):</div>
+            <input type="file" id="logo-upload" class="input-s" style="width:100%; margin-bottom:15px; font-size: 10px;" accept="image/*">
             <button class="btn-p" onclick="doLogin()" style="width:100%; justify-content:center;">Enter Dashboard</button>
         </div>
     </div>
 
     <div id="app-container">
-        <aside id="sidebar">
-            <div class="logo-slot" id="sidebar-logo">
-                <div style="font-weight:800; font-size:22px; color:#0f172a;">BrandOrb</div>
-            </div>
-            <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')"><i class="fas fa-route"></i> ROUTE MAPS</div>
-            <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')"><i class="fas fa-project-diagram"></i> CLUSTER GRAPHS</div>
-        </aside>
+   <aside id="sidebar">
+    <div class="logo-slot" id="sidebar-logo">
+        <div>BrandOrb</div>
+    </div>
+    <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')">
+        <i class="fas fa-route"></i> ROUTE MAPS
+    </div>
+    <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')">
+        <i class="fas fa-project-diagram"></i> CLUSTER GRAPHS
+    </div>
+</aside>
 
         <main id="main-content">
             <header id="list-header">
@@ -88,7 +163,7 @@
                     <input type="text" id="ent-search" class="input-s" placeholder="Search Entity/Product..." onkeyup="window.recomputeViz()">
                     <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
                     <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
-                    <button class="btn-p" onclick="window.downloadPDF()"><i class="fas fa-camera"></i> Save PNG</button>
+                    <button class="btn-p" onclick="window.downloadPDF()"><i class="fas fa-file-pdf"></i> Download PNG</button>
                 </div>
             </header>
 
@@ -129,16 +204,14 @@
         let reports = JSON.parse(localStorage.getItem('bo_reports')) || [];
         let clients = JSON.parse(localStorage.getItem('bo_clients')) || ["General"];
         window.currentTab = 'MAP';
-        let uploadedLogo = localStorage.getItem('bo_logo');
 
-        if(uploadedLogo) document.getElementById('sidebar-logo').innerHTML = `<img src="${uploadedLogo}">`;
-
+        // Fix: Logo handling
+        let uploadedLogo = null;
         document.getElementById('logo-upload').addEventListener('change', function(e) {
             const reader = new FileReader();
             reader.onload = function() {
                 uploadedLogo = reader.result;
-                localStorage.setItem('bo_logo', uploadedLogo);
-                document.getElementById('login-logo-preview').innerHTML = `<img src="${uploadedLogo}" style="max-height:60px;">`;
+                document.getElementById('login-logo-preview').innerHTML = `<img src="${uploadedLogo}" style="max-width:150px; max-height:60px;">`;
             }
             reader.readAsDataURL(e.target.files[0]);
         });
@@ -146,9 +219,21 @@
         function doLogin() {
             if(document.getElementById('pass').value === currentKey) {
                 document.getElementById('login-scr').style.display = 'none';
-                if(uploadedLogo) document.getElementById('sidebar-logo').innerHTML = `<img src="${uploadedLogo}">`;
+                if(uploadedLogo) {
+                    document.getElementById('sidebar-logo').innerHTML = `<img src="${uploadedLogo}">`;
+                }
                 updateClientMenu(); drawTable();
             } else alert("Invalid Key");
+        }
+
+        // Fix: Back Button Logic (prevents reload/logout)
+        function backToDashboard() {
+            document.getElementById('viz-header-ui').style.display = 'none';
+            document.getElementById('viz-container').style.display = 'none';
+            document.getElementById('list-header').style.display = 'flex';
+            document.getElementById('list-view').style.display = 'block';
+            // Cleanup any cluster popups left behind
+            d3.selectAll('.cluster-pop').remove();
         }
 
         function setTab(t) { 
@@ -158,68 +243,65 @@
             drawTable(); 
         }
 
-        function drawTable() {
-            const filtered = reports.filter(r => r.type === window.currentTab);
-            document.getElementById('rep-rows').innerHTML = filtered.map(r => `
-                <tr>
-                    <td>${r.name}</td><td>${r.client}</td><td>${r.type}</td>
-                    <td style="display: flex; gap: 8px;">
-                        <button class="btn-p" onclick="initViz('${r.url}')">View</button>
-                        <button class="delete-btn" onclick="deleteReport(${r.id})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`).join('');
+        // Rest of functions (updateClientMenu, drawTable, etc.) are standard
+        function changePass() {
+            const nw = prompt("Enter New Access Key:");
+            if(nw) { currentKey = nw; localStorage.setItem('bo_key', nw); alert("Key Updated"); }
         }
-
-        function deleteReport(id) {
-            if (confirm("Delete this report?")) {
-                reports = reports.filter(r => r.id !== id);
-                localStorage.setItem('bo_reports', JSON.stringify(reports));
-                drawTable();
-            }
+        function openClientMod() {
+            const c = prompt("Enter Client Name:");
+            if(c) { clients.push(c); localStorage.setItem('bo_clients', JSON.stringify(clients)); updateClientMenu(); }
         }
-
-        async function initViz(url) {
-            document.getElementById('list-header').style.display = 'none';
-            document.getElementById('list-view').style.display = 'none';
-            document.getElementById('viz-header-ui').style.display = 'flex';
-            document.getElementById('viz-container').style.display = 'flex';
-            
-            const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
-            try {
-                const res = await fetch(csvUrl);
-                const text = await res.text();
-                // Improved CSV Parsing
-                window.rawData = text.split('\n').filter(l => l.trim()).map(l => {
-                    return l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim());
-                });
-                window.populateFilters(); 
-                window.recomputeViz();
-            } catch(e) { alert("Error loading data. Ensure the Google Sheet is set to 'Anyone with the link can view'."); }
-        }
-
-        function backToDashboard() {
-            document.getElementById('viz-header-ui').style.display = 'none';
-            document.getElementById('viz-container').style.display = 'none';
-            document.getElementById('list-header').style.display = 'flex';
-            document.getElementById('list-view').style.display = 'block';
-        }
-
         function updateClientMenu() {
             document.getElementById('m-client').innerHTML = clients.map(c => `<option value="${c}">${c}</option>`).join('');
         }
-        function openClientMod() {
-            const c = prompt("Client Name:");
-            if(c) { clients.push(c); localStorage.setItem('bo_clients', JSON.stringify(clients)); updateClientMenu(); }
-        }
-        function openMod() { document.getElementById('add-modal').style.display = 'flex'; }
         function publishReport() {
             const r = { id: Date.now(), name: document.getElementById('m-title').value, url: document.getElementById('m-url').value, type: document.getElementById('m-type').value, client: document.getElementById('m-client').value };
             reports.push(r); localStorage.setItem('bo_reports', JSON.stringify(reports)); drawTable(); document.getElementById('add-modal').style.display='none';
         }
-        function changePass() {
-            const nw = prompt("New Key:");
-            if(nw) { currentKey = nw; localStorage.setItem('bo_key', nw); }
+      function drawTable() {
+    // Re-filter the reports based on the current tab (MAP or CLUSTER)
+    const filtered = reports.filter(r => r.type === window.currentTab);
+    
+    document.getElementById('rep-rows').innerHTML = filtered.map(r => `
+        <tr>
+            <td>${r.name}</td>
+            <td>${r.client}</td>
+            <td>${r.type}</td>
+            <td style="display: flex; gap: 8px;">
+                <button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button>
+                <button class="delete-btn" onclick="deleteReport(${r.id})">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        </tr>`).join('');
+}
+
+// Function to handle report deletion
+function deleteReport(id) {
+    if (confirm("Are you sure you want to delete this report?")) {
+        // Remove from the array
+        reports = reports.filter(report => report.id !== id);
+        // Save back to local storage
+        localStorage.setItem('bo_reports', JSON.stringify(reports));
+        // Refresh the table
+        drawTable();
+    }
+}
+        async function initViz(url, title) {
+            document.getElementById('list-header').style.display = 'none';
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('viz-header-ui').style.display = 'flex';
+            document.getElementById('viz-container').style.display = 'flex';
+            const csvUrl = url.includes("google.com") ? url.replace(/\/edit.*$/, '/export?format=csv') : url;
+            try {
+                const res = await fetch(csvUrl);
+                const text = await res.text();
+                window.rawData = text.split('\n').filter(l => l.trim()).map(l => l.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/"/g, '').trim()));
+                window.populateFilters(); window.recomputeViz();
+            } catch(e) { alert("Error loading data. Check CSV URL."); }
         }
+        function openMod() { document.getElementById('add-modal').style.display = 'flex'; }
     </script>
 </body>
 </html>
