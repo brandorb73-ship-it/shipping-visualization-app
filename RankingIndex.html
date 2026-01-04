@@ -15,6 +15,36 @@
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; gap: 20px; flex-wrap: wrap; }
         .controls-left { display: flex; align-items: center; gap: 20px; }
         .action-btns { display: flex; gap: 10px; }
+
+        <div class="top-bar">
+    <div class="controls-left">
+        <button class="btn-action" onclick="window.location.href='index.html'">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <h2 id="dynamic-title">Ranking Report</h2>
+    </div>
+    </div>
+
+<script>
+    window.onload = () => {
+        const params = new URLSearchParams(window.location.search);
+        const csvUrl = decodeURIComponent(params.get('csv'));
+        const type = params.get('type');
+
+        if (csvUrl) {
+            document.getElementById('dynamic-title').innerText = `${type} RANKING`;
+            Papa.parse(csvUrl, {
+                download: true,
+                header: true,
+                complete: (results) => {
+                    window.rankingData = results.data;
+                    window.currentView = type;
+                    renderRanking();
+                }
+            });
+        }
+    };
+</script>
         
         /* Buttons */
         .btn-action { padding: 10px 16px; border-radius: 8px; border: 1px solid var(--border); background: white; cursor: pointer; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
