@@ -121,24 +121,22 @@ window.drawMap = function(groups, idx) {
             </tr>`).join('');
 
             ant.bindPopup(`
-                <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-                    <div style="margin-bottom:8px;">
-                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
-                    </div>
-                   <table class="popup-table">
-    <thead>
-        <tr style="background: #f8fafc;">
-            <th style="width: 18%;">Date</th>
-            <th style="width: 15%;">Weight</th>
-            <th style="width: 15%;">Amount</th>
-            <th style="width: 42%;">PRODUCT</th> <th style="width: 10%;">Mode</th>
-        </tr>
-    </thead>
-    <tbody>${tableRows}</tbody>
-</table>
-                </div>`, { maxWidth: 420 });
+                const content = `
+    <div style="font-family:sans-serif;">
+        <strong>Exporter:</strong> ${f[idx("Exporter")]}<br>
+        <strong>Importer:</strong> ${f[idx("Importer")]}<br>
+        <table class="popup-table">
+            <thead>
+                <tr style="background:#f8fafc;">
+                    <th style="width: 18%;">Date</th>
+                    <th style="width: 15%;">Weight</th>
+                    <th style="width: 15%;">Amount</th>
+                    <th style="width: 42%;">PRODUCT</th> <th style="width: 10%;">Mode</th>
+                </tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+        </table>
+    </div>`;
         }
     });
 };
