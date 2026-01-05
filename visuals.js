@@ -1,3 +1,6 @@
+/**
+ * BRANDORB VISUALS - COMPLETE STABLE VERSION
+ */
 window.clusterMode = 'COUNTRY'; 
 
 const formatDate = (dVal) => {
@@ -75,7 +78,7 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                <td>${formatDate(s[idx("Date")])}</td>
+                <td style="white-space:nowrap">${formatDate(s[idx("Date")])}</td>
                 <td>${s[idx("Weight(Kg)")]}</td>
                 <td>$${s[idx("Amount($)")]}</td>
                 <td>${s[idx("PRODUCT")]}</td>
@@ -83,11 +86,14 @@ window.drawMap = function(groups, idx) {
             </tr>`).join('');
 
             ant.bindPopup(`
-                <div style="font-family:sans-serif;">
-                    <strong>Exporter:</strong> ${f[idx("Exporter")]}<br>
-                    <strong>Importer:</strong> ${f[idx("Importer")]}<br>
+                <div class="popup-header-info">
+                    <strong>Exporter:</strong> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <strong>Importer:</strong> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                    <strong>Route:</strong> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                </div>
+                <div style="max-height:200px; overflow-y:auto;">
                     <table class="popup-table">
-                        <thead><tr style="background:#f8fafc;">
+                        <thead><tr>
                             <th style="width:18%">Date</th>
                             <th style="width:12%">Weight</th>
                             <th style="width:15%">Amount</th>
@@ -113,7 +119,7 @@ window.drawCluster = function(data, idx) {
         const exp = r[idx("Exporter")], imp = r[idx("Importer")];
         const gp = r[idx("Origin Country")];
         if(!exp || !imp || !gp) return;
-        [gp].forEach(p => { if(!nodeSet.has(p)) { nodes.push({id: p, type: 'parent'}); nodeSet.add(p); }});
+        if(!nodeSet.has(gp)) { nodes.push({id: gp, type: 'parent'}); nodeSet.add(gp); }
         if(!nodeSet.has(exp)) { nodes.push({id: exp, type: 'exp'}); nodeSet.add(exp); }
         if(!nodeSet.has(imp)) { nodes.push({id: imp, type: 'imp'}); nodeSet.add(imp); }
         links.push({source: exp, target: imp, type: 'trade', data: r});
