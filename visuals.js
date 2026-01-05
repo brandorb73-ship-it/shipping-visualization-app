@@ -84,8 +84,9 @@ window.drawMap = function(groups, idx) {
 
             ant.bindPopup(`
                 <div style="font-family:sans-serif;">
-                    <strong>Exporter:</strong> ${f[idx("Exporter")]}<br>
-                    <strong>Importer:</strong> ${f[idx("Importer")]}<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    </div>
                     <table class="popup-table">
                         <thead><tr style="background:#f8fafc;">
                             <th style="width:18%">Date</th>
