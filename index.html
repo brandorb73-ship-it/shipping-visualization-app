@@ -9,45 +9,35 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
 
-/* --- ROUTE MAP & CLUSTER POPUP FIXES --- */
-
 /* Fix for the Map Popup Sizing */
 .leaflet-popup-content-wrapper {
-    width: 650px !important; /* Forces width to prevent horizontal scroll */
+    width: 600px !important; /* Forces a wide container */
     border-radius: 8px;
     padding: 5px;
 }
 
 .leaflet-popup-content {
-    width: 630px !important; /* Interior padding adjustment */
+    width: 580px !important; /* Interior width */
     margin: 10px !important;
 }
 
-/* Fix for Table Column Squeezing */
+/* Fix for Table Column Overlap */
 .popup-table {
     width: 100% !important;
-    table-layout: auto !important; /* Key: Allows columns to expand based on content */
+    table-layout: auto !important; /* Allows columns to expand based on content */
     border-collapse: collapse;
 }
 
 .popup-table th {
-    white-space: nowrap; /* Prevents headers from stacking */
+    white-space: nowrap; /* Prevents header text from wrapping */
     padding: 8px 4px;
     border-bottom: 2px solid #e2e8f0;
-    font-size: 11px;
 }
 
 .popup-table td {
     padding: 6px 4px;
     vertical-align: top;
-    word-break: normal; /* Prevents overlapping text */
-}
-
-/* Cluster Hover Pop-up styling */
-.cluster-pop {
-    pointer-events: none; /* Prevents the pop-up from flickering on hover */
-    width: 250px;
-    line-height: 1.5;
+    word-break: normal; /* Prevents awkward breaks in product names */
 }
         
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
