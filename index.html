@@ -142,167 +142,6 @@
     </style>
 </head>
 <body>
-
-    <div class="main-nav">
-    <div class="nav-brand">BRANDORB <span>INTELLIGENCE</span></div>
-    <div class="nav-links">
-        <a href="index.html" id="nav-map"><i class="fas fa-map-marked-alt"></i> Visual Analysis</a>
-        <a href="RankingIndex.html" id="nav-rank"><i class="fas fa-list-ol"></i> Ranking Reports</a>
-    </div>
-</div>
-
-<style>
-    .main-nav {
-        background: #1e293b;
-        color: white;
-        padding: 0 30px;
-        height: 60px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-family: 'Inter', sans-serif;
-    }
-    .nav-brand { font-weight: 800; letter-spacing: 1px; }
-    .nav-brand span { color: #0ea5e9; font-weight: 300; }
-    .nav-links { display: flex; gap: 20px; }
-    .nav-links a {
-        color: #94a3b8;
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 600;
-        transition: 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .nav-links a:hover, .nav-links a.active { color: white; }
-    
-    /* Highlight the active page */
-    #nav-map.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
-    #nav-rank.active { border-bottom: 2px solid #0ea5e9; padding-bottom: 5px; }
-
-/* --- BRANDORB SIDEBAR & MODAL STYLES --- */
-
-/* Logo Container */
-.logo-box { 
-    padding: 20px; 
-    text-align: center; 
-    border-bottom: 1px solid #e2e8f0; 
-    margin-bottom: 10px; 
-    min-height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Sidebar Section Titles */
-.nav-section-title { 
-    font-size: 11px; 
-    color: #94a3b8; 
-    padding: 20px 20px 5px; 
-    font-weight: bold; 
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-/* Dynamic Ranking Items */
-.ranking-item {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding-right: 15px !important;
-    cursor: pointer;
-}
-
-.delete-icon {
-    font-size: 12px;
-    color: #94a3b8;
-    padding: 5px;
-    transition: 0.2s;
-    border-radius: 4px;
-}
-
-.delete-icon:hover {
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-/* Add Report Button */
-.add-report-btn {
-    width: calc(100% - 40px);
-    margin: 15px 20px;
-    padding: 10px;
-    background: transparent;
-    border: 1px dashed #0ea5e9;
-    color: #0ea5e9;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.2s;
-}
-
-.add-report-btn:hover {
-    background: rgba(14, 165, 233, 0.05);
-    border-style: solid;
-}
-
-/* Modal Window (Popup) */
-.modal { 
-    display: none; 
-    position: fixed; 
-    top: 0; left: 0; 
-    width: 100%; height: 100%; 
-    background: rgba(15, 23, 42, 0.7); /* Dark semi-transparent overlay */
-    z-index: 9999; 
-    align-items: center; 
-    justify-content: center; 
-    backdrop-filter: blur(4px);
-}
-
-.modal-content { 
-    background: white; 
-    padding: 30px; 
-    border-radius: 12px; 
-    width: 400px; 
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal-content h3 { margin-top: 0; color: #1e293b; }
-
-.modal-content label {
-    display: block;
-    font-size: 12px;
-    font-weight: 600;
-    color: #64748b;
-    margin-bottom: 5px;
-}
-
-.modal-content input, .modal-content select { 
-    width: 100%; 
-    padding: 10px; 
-    margin-bottom: 20px; 
-    border: 1px solid #e2e8f0; 
-    border-radius: 6px; 
-    box-sizing: border-box; /* Ensures padding doesn't break width */
-}
-
-.modal-actions { 
-    display: flex; 
-    justify-content: flex-end; 
-    gap: 10px; 
-}
-
-.btn-primary {
-    background: #0ea5e9;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-}
-    
-</style>
     <div id="login-scr" style="position:fixed; inset:0; background:var(--navy); display:flex; align-items:center; justify-content:center; z-index:9999;">
         <div style="background:white; padding:40px; border-radius:12px; width:300px; text-align:center;">
             <div id="login-logo-preview" style="margin-bottom: 20px;"><h2>BrandOrb</h2></div>
@@ -315,46 +154,16 @@
 
     <div id="app-container">
 <aside id="sidebar">
-   <div class="sidebar">
-    <div id="logo-container" class="logo-box">
-        <input type="file" id="logo-upload" style="display:none" accept="image/*" onchange="handleLogo(this)">
-        <div onclick="document.getElementById('logo-upload').click()" style="cursor:pointer; font-size:12px; color:#64748b;">
-            <i class="fas fa-camera"></i> Upload BrandOrb Logo
-        </div>
+    <div class="logo-slot" id="sidebar-logo">
+        <div>BrandOrb</div>
     </div>
 
-    <nav>
-        <div class="nav-item active" onclick="showTab('MAP')"><i class="fas fa-route"></i> Route Maps</div>
-        <div class="nav-item" onclick="showTab('CLUSTER')"><i class="fas fa-network-wired"></i> Cluster Graphs</div>
-        
-        <div class="nav-section-title">RANKING REPORTS</div>
-        <div id="ranking-reports-list">
-            </div>
-        
-        <button class="add-report-btn" onclick="openReportModal()">
-            <i class="fas fa-plus-circle"></i> Add Ranking Report
-        </button>
-    </nav>
-</div>
-
-<div id="report-modal" class="modal">
-    <div class="modal-content">
-        <h3>Publish New Ranking Report</h3>
-        <label>Report Type</label>
-        <select id="modal-type">
-            <option value="EXPORTER">Exporter Ranking</option>
-            <option value="IMPORTER">Importer Ranking</option>
-        </select>
-        <label>Google Sheet CSV Link</label>
-        <input type="text" id="modal-csv" placeholder="Paste CSV URL here...">
-        <label>Report Name</label>
-        <input type="text" id="modal-name" placeholder="e.g., Electronics Ranking 2024">
-        <div class="modal-actions">
-            <button onclick="closeReportModal()">Cancel</button>
-            <button class="btn-primary" onclick="publishReport()">Publish Report</button>
-        </div>
+    <div class="nav-item active" id="n-MAP" onclick="setTab('MAP')">
+        <i class="fas fa-route"></i> ROUTE MAPS
     </div>
-</div>
+    <div class="nav-item" id="n-CLUSTER" onclick="setTab('CLUSTER')">
+        <i class="fas fa-project-diagram"></i> CLUSTER GRAPHS
+    </div>
 </aside>
 
         <main id="main-content">
@@ -519,4 +328,3 @@ function deleteReport(id) {
     </script>
 </body>
 </html>
-document.getElementById('nav-map').classList.add('active');
