@@ -94,56 +94,68 @@ window.drawMap = function(groups, idx) {
         const f = group[0];
         const lat1 = parseFloat(f[idx("Origin latitude")]);
         const lon1 = parseFloat(f[idx("Origin longitude")]);
-        
         const lat2 = parseFloat(f[idx("Destination latitude")]);
         const lon2 = parseFloat(f[idx("Destination longitude")]);
 
-        if (!isNaN(lat1) && !isNaN(lat2)) {
-            // Fan out destinations to prevent overlap, but keep origins identical
+       if (!isNaN(lat1) && !isNaN(lat2)) {
             const offset = (gIdx * 0.12); 
             const finalDestLat = lat2 + offset;
             const finalDestLon = lon2 + offset;
 
-            // STRAIGHT ANT PATH (No bend)
+            // Define the Ant Path
             const ant = L.polyline.antPath([[lat1, lon1], [finalDestLat, finalDestLon]], { 
                 color: f[idx("COLOR")] || '#0ea5e9', 
-                weight: 2.5, 
+                weight: 4, // Thicker line makes hovering easier
                 delay: 1000,
                 dashArray: [10, 20]
             }).addTo(window.LMap);
 
-            const tableRows = group.map(s => `<tr>
-                    <td>${s[idx("Date")] || 'N/A'}</td>
+            // Generate the Table Rows
+            const tableRows = group.map(s => `
+                <tr>
+                    <td style="white-space:nowrap;">${s[idx("Date")] || 'N/A'}</td>
                     <td>${s[idx("Weight(Kg)")]}</td>
                     <td>$${s[idx("Amount($)")]}</td>
                     <td>${s[idx("PRODUCT")]}</td>
                     <td>${s[idx("Mode of Transportation")]}</td>
-            </tr>`).join('');
+                </tr>`).join('');
 
-            ant.bindPopup(`
-                <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-                    <div style="margin-bottom:8px;">
-                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+            // Define the Popup HTML
+            const popupContent = `
+                <div style="font-family:'Inter', sans-serif;">
+                    <div style="margin-bottom:10px;">
+                        <strong>Exporter:</strong> ${f[idx("Exporter")]}<br>
+                        <strong>Importer:</strong> ${f[idx("Importer")]}<br>
+                        <strong>Ports:</strong> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
-                    <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
+                    <table class="popup-table">
                         <thead>
                             <tr style="background: #f8fafc;">
-                                <th style="width:85px; text-align:left;">Date</th>
-                                <th style="width:35px;">Weight(Kg)</th>
-                                <th style="width:60px;">Amount($)</th>
-                                <th style="width:130px;">PRODUCT</th>
-                                <th style="width:40px;">Mode</th>
+                                <th>Date</th>
+                                <th>Weight</th>
+                                <th>Amount</th>
+                                <th>PRODUCT</th>
+                                <th>Mode</th>
                             </tr>
                         </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
-                </div>`, { maxWidth: 420 });
+                </div>`;
+
+            // Hover Event Listeners
+            ant.on('mouseover', function (e) {
+                this.bindPopup(popupContent, { 
+                    maxWidth: 600, 
+                    closeButton: false // Cleaner look for hover tooltips
+                }).openPopup();
+            });
+
+            ant.on('mouseout', function (e) {
+                this.closePopup();
+            });
         }
     });
 };
-
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
