@@ -139,7 +139,6 @@ window.drawMap = function(groups, idx) {
     </div>`;
         }
     });
-};
 
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
