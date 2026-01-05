@@ -121,24 +121,28 @@ window.drawMap = function(groups, idx) {
             </tr>`).join('');
 
             ant.bindPopup(`
-                const content = `
-    <div style="font-family:sans-serif;">
-        <strong>Exporter:</strong> ${f[idx("Exporter")]}<br>
-        <strong>Importer:</strong> ${f[idx("Importer")]}<br>
-        <table class="popup-table">
-            <thead>
-                <tr style="background:#f8fafc;">
-                    <th style="width: 18%;">Date</th>
-                    <th style="width: 15%;">Weight</th>
-                    <th style="width: 15%;">Amount</th>
-                    <th style="width: 42%;">PRODUCT</th> <th style="width: 10%;">Mode</th>
-                </tr>
-            </thead>
-            <tbody>${tableRows}</tbody>
-        </table>
-    </div>`;
+                <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
+                    <div style="margin-bottom:8px;">
+                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    </div>
+                    <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th style="width:85px; text-align:left;">Date</th>
+                                <th style="width:35px;">Weight(Kg)</th>
+                                <th style="width:60px;">Amount($)</th>
+                                <th style="width:130px;">PRODUCT</th>
+                                <th style="width:40px;">Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`, { maxWidth: 420 });
         }
     });
+};
 
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
