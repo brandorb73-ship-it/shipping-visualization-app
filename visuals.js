@@ -1,6 +1,11 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+// Adds a tiny random offset to coordinates to prevent overlapping
+function applyJitter(coord) {
+    const jitterAmount = 0.005; // Adjust this for more or less spread
+    return coord + (Math.random() - 0.5) * jitterAmount;
+}
 window.clusterMode = 'COUNTRY'; 
 
 // FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
@@ -104,6 +109,28 @@ window.drawMap = function(groups, idx) {
             const finalDestLat = lat2 + offset;
             const finalDestLon = lon2 + offset;
 
+data.forEach(row => {
+    // Original Coordinates
+    let lat = parseFloat(row[idx("Latitude")]);
+    let lng = parseFloat(row[idx("Longitude")]);
+
+    // Apply Jitter only if you have multiple points
+    // This shifts the marker by a few meters so they don't stack
+    const finalLat = applyJitter(lat);
+    const finalLng = applyJitter(lng);
+
+    const marker = L.circleMarker([finalLat, finalLng], {
+        radius: 6,
+        fillColor: "#0ea5e9",
+        color: "#fff",
+        weight: 2,
+        fillOpacity: 0.8
+    }).addTo(map);
+
+    marker.bindPopup(`<b>Port:</b> ${row[idx("Port Name")]}`);
+});
+
+            
             // STRAIGHT ANT PATH (No bend)
             const ant = L.polyline.antPath([[lat1, lon1], [finalDestLat, finalDestLon]], { 
                 color: f[idx("COLOR")] || '#0ea5e9', 
@@ -115,9 +142,9 @@ window.drawMap = function(groups, idx) {
             const tableRows = group.map(s => `<tr>
                     <td>${s[idx("Date")] || 'N/A'}</td>
                     <td>${s[idx("Quantity")]}</td>
-                    <td>$${s[idx("Value(USD)")]}</td>
+                    <td>$${s[idx("Amount($)")]}</td>
                     <td>${s[idx("PRODUCT")]}</td>
-                    <td>${s[idx("Mode of Transport")]}</td>
+                    <td>${s[idx("Mode of Transportation")]}</td>
             </tr>`).join('');
 
             ant.bindPopup(`
