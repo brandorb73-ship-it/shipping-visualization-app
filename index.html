@@ -24,20 +24,18 @@
 /* Fix for Table Column Overlap */
 .popup-table {
     width: 100% !important;
-    table-layout: auto !important; /* Allows columns to expand based on content */
+    table-layout: fixed !important; /* Forces the table to use all available width */
     border-collapse: collapse;
+    margin-top: 10px;
 }
 
-.popup-table th {
-    white-space: nowrap; /* Prevents header text from wrapping */
-    padding: 8px 4px;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.popup-table td {
-    padding: 6px 4px;
-    vertical-align: top;
-    word-break: normal; /* Prevents awkward breaks in product names */
+.popup-table th, .popup-table td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Adds ... if text is too long for the column */
+    white-space: nowrap; 
 }
         
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
