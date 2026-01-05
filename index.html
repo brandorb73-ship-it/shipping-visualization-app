@@ -9,33 +9,36 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
 
-/* Fix for the Map Popup Sizing */
+/* --- Optimized Pop-up and Table Width --- */
+
 .leaflet-popup-content-wrapper {
-    width: 600px !important; /* Forces a wide container */
+    /* Reduced from 650px to 550px to remove dead space on the right */
+    width: 550px !important; 
     border-radius: 8px;
-    padding: 5px;
+    padding: 2px;
 }
 
 .leaflet-popup-content {
-    width: 580px !important; /* Interior width */
+    /* Ensure the content uses nearly the full wrapper width */
+    width: 530px !important; 
     margin: 10px !important;
 }
 
-/* Fix for Table Column Overlap */
 .popup-table {
-    width: 100% !important;
-    table-layout: fixed !important; /* Forces the table to use all available width */
+    width: 100% !important; /* Forces table to stretch to the right edge */
+    table-layout: fixed !important; /* Prevents columns from 'squeezing' data */
     border-collapse: collapse;
-    margin-top: 10px;
 }
 
 .popup-table th, .popup-table td {
-    border: 1px solid #ddd;
-    padding: 6px;
+    padding: 6px 4px;
+    font-size: 11px;
+    border: 1px solid #e2e8f0;
     text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis; /* Adds ... if text is too long for the column */
-    white-space: nowrap; 
+    /* Allows text to wrap instead of being shortened with '...' */
+    white-space: normal !important; 
+    word-wrap: break-word;
+    overflow: visible !important;
 }
         
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
