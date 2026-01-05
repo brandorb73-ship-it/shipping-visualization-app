@@ -8,6 +8,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+
+/* --- ROUTE MAP & CLUSTER POPUP FIXES --- */
+
+/* Fix for the Map Popup Sizing */
+.leaflet-popup-content-wrapper {
+    width: 650px !important; /* Forces width to prevent horizontal scroll */
+    border-radius: 8px;
+    padding: 5px;
+}
+
+.leaflet-popup-content {
+    width: 630px !important; /* Interior padding adjustment */
+    margin: 10px !important;
+}
+
+/* Fix for Table Column Squeezing */
+.popup-table {
+    width: 100% !important;
+    table-layout: auto !important; /* Key: Allows columns to expand based on content */
+    border-collapse: collapse;
+}
+
+.popup-table th {
+    white-space: nowrap; /* Prevents headers from stacking */
+    padding: 8px 4px;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 11px;
+}
+
+.popup-table td {
+    padding: 6px 4px;
+    vertical-align: top;
+    word-break: normal; /* Prevents overlapping text */
+}
+
+/* Cluster Hover Pop-up styling */
+.cluster-pop {
+    pointer-events: none; /* Prevents the pop-up from flickering on hover */
+    width: 250px;
+    line-height: 1.5;
+}
+        
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100vw; font-family: 'Inter', sans-serif; background: var(--navy); overflow: hidden; }
         #app-container { width: 100vw; height: 100vh; background: var(--bg); display: flex; }
