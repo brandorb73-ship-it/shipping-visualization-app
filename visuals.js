@@ -181,9 +181,27 @@ window.drawCluster = function(data, idx) {
         .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(width/2, height/2));
 
-    const link = g.append("g").selectAll("line").data(links).enter().append("line")
-        .attr("stroke", d => d.type === 'link' ? "#e2e8f0" : "#94a3b8").attr("stroke-width", 2);
+    const tradeLinks = link.filter(d => d.type === 'trade');
 
+    tradeLinks.on("mouseover", (e, d) => {
+        d3.selectAll(".cluster-pop").remove();
+        d3.select("#map-frame").append("div")
+            .attr("class", "cluster-pop")
+            .style("left", (e.offsetX + 15) + "px")
+            .style("top", (e.offsetY + 15) + "px")
+            .style("display", "block")
+            .html(`
+                <strong>${d.data[idx("PRODUCT")]}</strong><br>
+                Date: ${formatDate(d.data[idx("Date")])}<br>
+                Value: $${d.data[idx("Amount($)")]}
+            `);
+    }).on("mousemove", (e) => {
+        d3.select(".cluster-pop")
+            .style("left", (e.offsetX + 15) + "px")
+            .style("top", (e.offsetY + 15) + "px");
+    }).on("mouseout", () => {
+        d3.selectAll(".cluster-pop").remove();
+    });
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g")
         .call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
         .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
