@@ -328,35 +328,3 @@ function deleteReport(id) {
     </script>
 </body>
 </html>
-window.onload = () => {
-    const params = new URLSearchParams(window.location.search);
-    let csvUrl = decodeURIComponent(params.get('csv'));
-    const reportType = params.get('type');
-
-    if (csvUrl) {
-        // Add a timestamp to the URL to bypass browser caching
-        const cacheBuster = csvUrl.includes('?') ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-        const finalUrl = csvUrl + cacheBuster;
-
-        Papa.parse(finalUrl, {
-            download: true,
-            header: true,
-            skipEmptyLines: true, // Prevents errors from blank rows
-            complete: (results) => {
-                if(results.data && results.data.length > 0) {
-                    window.rankingData = results.data;
-                    window.currentView = reportType || 'EXPORTER';
-                    renderRanking();
-                    document.getElementById('report-title').innerText = reportType + " RANKING";
-                } else {
-                    console.error("Empty data returned from CSV");
-                }
-            },
-            error: (err) => {
-                console.error("PapaParse failed to fetch:", err);
-                document.getElementById('table-container').innerHTML = 
-                    `<div class="loading" style="color:red;">Error fetching data. Ensure Sheet is 'Published to Web'.</div>`;
-            }
-        });
-    }
-};
