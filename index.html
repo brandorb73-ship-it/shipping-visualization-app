@@ -8,6 +8,33 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* Forces the popup to be wide enough for the table */
+.leaflet-popup-content-wrapper {
+    width: 600px !important; 
+    border-radius: 8px;
+}
+
+.leaflet-popup-content {
+    width: 580px !important; 
+    margin: 10px !important;
+}
+
+/* Fixes the table squeezing and removes the horizontal scroll */
+.popup-table {
+    width: 100% !important;
+    table-layout: auto !important; /* Key: lets columns expand to fit text */
+    border-collapse: collapse;
+}
+
+.popup-table th, .popup-table td {
+    padding: 8px 4px;
+    font-size: 11px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+    white-space: normal !important; /* Allows product names to wrap to 2 lines */
+    word-break: normal;
+    overflow: visible !important;
+}
         :root { --navy: #0f172a; --blue: #38bdf8; --grey: #64748b; --bg: #f8fafc; --border: #e2e8f0; --white: #ffffff; }
         body, html { margin: 0; padding: 0; height: 100%; width: 100vw; font-family: 'Inter', sans-serif; background: var(--navy); overflow: hidden; }
         #app-container { width: 100vw; height: 100vh; background: var(--bg); display: flex; }
