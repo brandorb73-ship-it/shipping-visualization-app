@@ -114,10 +114,10 @@ window.drawMap = function(groups, idx) {
 
             const tableRows = group.map(s => `<tr>
                     <td>${s[idx("Date")] || 'N/A'}</td>
-                    <td>${s[idx("Quantity")]}</td>
-                    <td>$${s[idx("Value(USD)")]}</td>
+                    <td>${s[idx("Weight(Kg)")]}</td>
+                    <td>$${s[idx("Amount($)")]}</td>
                     <td>${s[idx("PRODUCT")]}</td>
-                    <td>${s[idx("Mode of Transport")]}</td>
+                    <td>${s[idx("Mode of Transportation")]}</td>
             </tr>`).join('');
 
             ant.bindPopup(`
@@ -131,8 +131,8 @@ window.drawMap = function(groups, idx) {
                         <thead>
                             <tr style="background: #f8fafc;">
                                 <th style="width:85px; text-align:left;">Date</th>
-                                <th style="width:35px;">Qty</th>
-                                <th style="width:60px;">Value</th>
+                                <th style="width:35px;">Weight(Kg)</th>
+                                <th style="width:60px;">Amount($)</th>
                                 <th style="width:130px;">PRODUCT</th>
                                 <th style="width:40px;">Mode</th>
                             </tr>
@@ -210,7 +210,7 @@ window.drawCluster = function(data, idx) {
                 <strong>${d.data[idx("PRODUCT")]}</strong><br>
                 Date: ${formatDate(d.data[idx("Date")])}<br>
                 Qty: ${d.data[idx("Quantity")] || '-'}<br>
-                Value: $${d.data[idx("Value(USD)")]}`);
+                Value: $${d.data[idx("Amount($)")]}`);
     });
 
     sim.on("tick", () => {
