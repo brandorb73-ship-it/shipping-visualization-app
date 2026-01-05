@@ -1,24 +1,19 @@
 /**
- * BRANDORB VISUALS - FINAL INTEGRATED VERSION
+ * BRANDORB VISUALS - STABLE VERSION
  */
-
 window.clusterMode = 'COUNTRY'; 
 
-// --- HELPER FUNCTIONS ---
-
-// Prevents overlapping markers on the map
-function applyJitter(coord) {
-    const jitterAmount = 0.005; 
-    return coord + (Math.random() - 0.5) * jitterAmount;
-}
-
+// FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
+    
     const strVal = String(dateValue).trim();
+    // 1. Try to match YYYY-MM-DD pattern directly from string
     const regex = /(\d{4})-(\d{2})-(\d{2})/;
     const match = strVal.match(regex);
     if (match) return match[0];
 
+    // 2. Fallback to JS Date parsing
     let d = new Date(dateValue);
     if (!isNaN(d.getTime())) {
         const y = d.getFullYear();
@@ -26,10 +21,18 @@ const formatDate = (dateValue) => {
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
     }
+
     return strVal; 
 };
 
-// --- NAVIGATION & UI LOGIC ---
+window.downloadPDF = function() {
+    html2canvas(document.getElementById('map-frame'), { useCORS: true }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'BrandOrb_Report.png';
+        link.href = canvas.toDataURL();
+        link.click();
+    });
+};
 
 window.populateFilters = function() {
     if (!window.rawData || window.rawData.length < 2) return;
@@ -83,46 +86,63 @@ window.recomputeViz = function() {
     }
 };
 
-// --- ROUTE MAP ---
-
 window.drawMap = function(groups, idx) {
     window.LMap = L.map('map-frame').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
         const f = group[0];
-        const lat1 = applyJitter(parseFloat(f[idx("Origin latitude")]));
-        const lon1 = applyJitter(parseFloat(f[idx("Origin longitude")]));
-        const lat2 = applyJitter(parseFloat(f[idx("Destination latitude")]));
-        const lon2 = applyJitter(parseFloat(f[idx("Destination longitude")]));
+        const lat1 = parseFloat(f[idx("Origin latitude")]);
+        const lon1 = parseFloat(f[idx("Origin longitude")]);
+        
+        const lat2 = parseFloat(f[idx("Destination latitude")]);
+        const lon2 = parseFloat(f[idx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
-            const ant = L.polyline.antPath([[lat1, lon1], [lat2, lon2]], { 
+            // Fan out destinations to prevent overlap, but keep origins identical
+            const offset = (gIdx * 0.12); 
+            const finalDestLat = lat2 + offset;
+            const finalDestLon = lon2 + offset;
+
+            // STRAIGHT ANT PATH (No bend)
+            const ant = L.polyline.antPath([[lat1, lon1], [finalDestLat, finalDestLon]], { 
                 color: f[idx("COLOR")] || '#0ea5e9', 
                 weight: 2.5, 
-                delay: 1000
+                delay: 1000,
+                dashArray: [10, 20]
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
                     <td>${s[idx("Date")] || 'N/A'}</td>
                     <td>${s[idx("Quantity")]}</td>
-                    <td>$${s[idx("Amount($)")]}</td>
+                    <td>$${s[idx("Value(USD)")]}</td>
                     <td>${s[idx("PRODUCT")]}</td>
+                    <td>${s[idx("Mode of Transport")]}</td>
             </tr>`).join('');
 
-            ant.bindPopup(`<div style="width:350px;">
-                <b>Exporter:</b> ${f[idx("Exporter")]}<br>
-                <b>Importer:</b> ${f[idx("Importer")]}<br>
-                <table style="width:100%; font-size:11px; margin-top:10px; border-top:1px solid #eee;">
-                    <thead><tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th></tr></thead>
-                    <tbody>${tableRows}</tbody>
-                </table>
-            </div>`);
+            ant.bindPopup(`
+                <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
+                    <div style="margin-bottom:8px;">
+                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    </div>
+                    <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th style="width:85px; text-align:left;">Date</th>
+                                <th style="width:35px;">Qty</th>
+                                <th style="width:60px;">Value</th>
+                                <th style="width:130px;">PRODUCT</th>
+                                <th style="width:40px;">Mode</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`, { maxWidth: 420 });
         }
     });
 };
-
-// --- CLUSTER GRAPH ---
 
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
@@ -156,28 +176,45 @@ window.drawCluster = function(data, idx) {
         .call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
         .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
 
-    node.append("circle").attr("r", d => d.type === 'parent' ? 22 : 14)
+    // Circles
+    node.append("circle")
+        .attr("r", d => d.type === 'parent' ? 22 : 14)
         .attr("fill", d => d.type === 'parent' ? '#1e293b' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'))
         .attr("stroke", "#fff").attr("stroke-width", 2);
 
-    node.append("foreignObject").attr("width", 30).attr("height", 30).attr("x", -15).attr("y", -15)
+    // FIXED: Centered Icons
+    node.append("foreignObject")
+        .attr("width", 30)
+        .attr("height", 30)
+        // Center calculation: (width / -2) for horizontal and (height / -2) for vertical centering
+        .attr("x", -15) 
+        .attr("y", -15)
         .style("pointer-events", "none")
         .html(d => {
-            let icon = d.type==='exp' ? 'fa-building' : (d.type==='imp' ? 'fa-store' : 'fa-globe');
-            return `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;color:white;font-size:12px;"><i class="fas ${icon}"></i></div>`;
+            let iconClass = "fa-globe"; 
+            if (d.type === 'exp') iconClass = "fa-building"; 
+            if (d.type === 'imp') iconClass = "fa-store";    
+            return `<div style="display:flex; align-items:center; justify-content:center; width:30px; height:30px;">
+                        <i class="fas ${iconClass}" style="color:white; font-size:${d.type==='parent'?'16px':'12px'};"></i>
+                    </div>`;
         });
 
     node.append("text").text(d => d.id).attr("y", 35).attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "bold");
 
+    // FIXED: Added Quantity to Popup
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
             .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
                 <strong>${d.data[idx("PRODUCT")]}</strong><br>
+                Date: ${formatDate(d.data[idx("Date")])}<br>
                 Qty: ${d.data[idx("Quantity")] || '-'}<br>
                 Value: $${d.data[idx("Value(USD)")]}`);
     });
 
     sim.on("tick", () => {
-        link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2",
+        link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
+        node.attr("transform", d=>`translate(${d.x},${d.y})`);
+    });
+};
