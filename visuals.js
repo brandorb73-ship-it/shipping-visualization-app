@@ -1,12 +1,26 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+// ================= PLAYBACK STATE =================
+window.playback = {
+    enabled: false,
+    unit: 'MONTH',
+    speed: 800, // ms per frame (medium)
+    timer: null,
+    frames: [],
+    currentIndex: 0
+};
 window.clusterMode = 'COUNTRY'; 
 
 // FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
-    
+    window.getMonthKey = function(dateStr) {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    if (isNaN(d)) return null;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+};
     const strVal = String(dateValue).trim();
     // 1. Try to match YYYY-MM-DD pattern directly from string
     const regex = /(\d{4})-(\d{2})-(\d{2})/;
@@ -87,14 +101,34 @@ return oMatch && dMatch && opMatch && dpMatch && sMatch;
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
+        // ---------- BUILD PLAYBACK FRAMES (MONTHLY) ----------
+window.playback.frames = [];
+window.playback.currentIndex = 0;
+
+const monthGroups = {};
+filteredRows.forEach(r => {
+    const m = getMonthKey(formatDate(r[idx("Date")]));
+    if (!m) return;
+    if (!monthGroups[m]) monthGroups[m] = [];
+    monthGroups[m].push(r);
+});
+
+window.playback.frames = Object.keys(monthGroups)
+    .sort()
+    .map(m => monthGroups[m]);
+// ---------------------------------------------------
         const groups = {};
         filteredRows.forEach(r => {
            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
-        window.drawMap(Object.values(groups), idx);
-    } else {
+        if (!window.playback.enabled) {
+    window.drawMap(Object.values(groups), idx);
+} else {
+    window.drawMap([], idx); // start empty
+    window.startPlayback(idx);
+}
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
             <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
@@ -209,7 +243,34 @@ overflow:hidden;">
         }
     });
 };
+window.startPlayback = function(idx) {
+    if (!window.playback.frames.length) return;
 
+    if (window.playback.timer) {
+        clearInterval(window.playback.timer);
+    }
+
+    window.playback.timer = setInterval(() => {
+        if (window.playback.currentIndex >= window.playback.frames.length) {
+            clearInterval(window.playback.timer);
+            return;
+        }
+
+        const rows = window.playback.frames[window.playback.currentIndex];
+        const groups = {};
+
+        rows.forEach(r => {
+            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(r);
+        });
+
+        // ACCUMULATE: draw on existing map
+        window.drawMap(Object.values(groups), idx);
+
+        window.playback.currentIndex++;
+    }, window.playback.speed);
+};
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
