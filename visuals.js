@@ -99,13 +99,17 @@ window.drawMap = function(groups, idx) {
         const lon2 = parseFloat(f[idx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
-            // Fan out destinations to prevent overlap, but keep origins identical
-            const offset = (gIdx * 0.12); 
-            const finalDestLat = lat2 + offset;
-            const finalDestLon = lon2 + offset;
+// MICRO-JITTER to separate very close ports (e.g. Shekou vs Nansha)
+const jitter = 0.015; // ~1.6km, visually distinct but accurate
+
+const originLat = lat1 + ((gIdx % 3) - 1) * jitter;
+const originLon = lon1 + ((gIdx % 3) - 1) * jitter;
+
+const destLat = lat2 + ((gIdx % 3) - 1) * jitter;
+const destLon = lon2 + ((gIdx % 3) - 1) * jitter;
 
             // STRAIGHT ANT PATH (No bend)
-            const ant = L.polyline.antPath([[lat1, lon1], [finalDestLat, finalDestLon]], { 
+         const ant = L.polyline.antPath([[originLat, originLon], [destLat, destLon]], {
                 color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== "" 
     ? f[idx("COLOR")] 
     : '#0ea5e9',
@@ -173,8 +177,6 @@ window.drawCluster = function(data, idx) {
 
     let nodes = [], links = [], nodeSet = new Set();
     data.forEach(r => {
-        Object.values(window._tradeAgg || {}).forEach(l => links.push(l));
-window._tradeAgg = null;
         const exp = r[idx("Exporter")], imp = r[idx("Importer")];
         const gp = window.clusterMode === 'COUNTRY' ? r[idx("Origin Country")] : r[idx("PRODUCT")];
         const dp = window.clusterMode === 'COUNTRY' ? r[idx("Destination Country")] : r[idx("PRODUCT")];
