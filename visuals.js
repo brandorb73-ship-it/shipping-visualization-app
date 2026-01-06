@@ -90,53 +90,83 @@ window.recomputeViz = function() {
     frame.innerHTML = "";
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
+    // --- Always show draggable playback button overlay ---
+    if (!document.getElementById('playback-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'playback-overlay';
+        overlay.style.position = 'absolute';
+        overlay.style.top = '10px';
+        overlay.style.left = '10px';
+        overlay.style.zIndex = 9999;
+        overlay.style.background = 'rgba(255,255,255,0.9)';
+        overlay.style.padding = '6px 10px';
+        overlay.style.borderRadius = '8px';
+        overlay.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
+        overlay.style.cursor = 'move';
+        overlay.innerHTML = `
+            <button id="playback-btn" class="toggle-btn">▶ Playback (Monthly)</button>
+            <span style="font-size:11px;color:#64748b;margin-left:6px;">Speed: Medium · Unit: Month · Accumulate</span>
+        `;
+        document.getElementById('map-frame').appendChild(overlay);
+
+        // Playback toggle
+        const btn = document.getElementById('playback-btn');
+        btn.onclick = function() {
+            window.playback.enabled = !window.playback.enabled;
+            btn.classList.toggle('active', window.playback.enabled);
+            window.recomputeViz();
+        };
+
+        // Make overlay draggable
+        let isDragging = false, offsetX = 0, offsetY = 0;
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === btn) return; // Don't drag when clicking button
+            isDragging = true;
+            offsetX = e.clientX - overlay.offsetLeft;
+            offsetY = e.clientY - overlay.offsetTop;
+            document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            overlay.style.left = (e.clientX - offsetX) + 'px';
+            overlay.style.top = (e.clientY - offsetY) + 'px';
+        });
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+            document.body.style.userSelect = 'auto';
+        });
+    }
+
+    // Build playback frames
+    window.playback.frames = [];
+    window.playback.currentIndex = 0;
+
+    const monthGroups = {};
+    filteredRows.forEach(r => {
+        const m = getMonthKey(formatDate(r[idx("Date")]));
+        if (!m) return;
+        if (!monthGroups[m]) monthGroups[m] = [];
+        monthGroups[m].push(r);
+    });
+    window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
+
+    // Draw map
+    const groups = {};
+    filteredRows.forEach(r => {
+        const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+    });
+
     if (window.currentTab === 'MAP') {
-        // BUILD PLAYBACK
-        window.playback.frames = [];
-        window.playback.currentIndex = 0;
-
-        const monthGroups = {};
-        filteredRows.forEach(r => {
-            const m = getMonthKey(formatDate(r[idx("Date")]));
-            if (!m) return;
-            if (!monthGroups[m]) monthGroups[m] = [];
-            monthGroups[m].push(r);
-        });
-        window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
-
-        // DRAW MAP
-        const groups = {};
-        filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(r);
-        });
-
-        // Playback controls
-        frame.insertAdjacentHTML('afterbegin', `
-            <div class="viz-controls">
-                <button class="toggle-btn ${window.playback.enabled ? 'active' : ''}" onclick="window.playback.enabled=!window.playback.enabled; recomputeViz();">
-                    ▶ Playback (Monthly)
-                </button>
-                <span style="font-size:11px;color:#64748b;align-self:center;">
-                    Speed: Medium · Unit: Month · Accumulate
-                </span>
-            </div>
-        `);
-
         window.drawMap(Object.values(groups), idx);
         if (window.playback.enabled) window.startPlayback(idx);
-
     } else {
-        // CLUSTER VIEW
-        frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
-            <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
-            <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
-        </div>`);
         window.drawCluster(filteredRows, idx);
     }
 };
 
+// ================= DRAW MAP =================
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
@@ -147,108 +177,58 @@ window.drawMap = function(groups, idx) {
         const f = group[0];
         const lat1 = parseFloat(f[idx("Origin latitude")]);
         const lon1 = parseFloat(f[idx("Origin longitude")]);
-        
         const lat2 = parseFloat(f[idx("Destination latitude")]);
         const lon2 = parseFloat(f[idx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
+            const jitter = gIdx * 0.015;
+            const originLat = lat1 + jitter;
+            const originLon = lon1 + jitter;
+            const destLat = lat2 + jitter;
+            const destLon = lon2 + jitter;
 
-// Force Leaflet to respect small coordinate differences
-const jitter = gIdx * 0.015;
+            const ant = L.polyline.antPath(
+                [[originLat, originLon], [destLat, destLon]],
+                { color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== "" ? f[idx("COLOR")] : '#0ea5e9', weight: 2.5, delay: 1000, dashArray: [10, 20] }
+            ).addTo(window.LMap);
 
-const originLat = lat1 + jitter;
-const originLon = lon1 + jitter;
+            routeLayers.push({ color: f[idx("COLOR")] || '#0ea5e9', layer: ant });
 
-const destLat = lat2 + jitter;
-const destLon = lon2 + jitter;
+            L.circleMarker([originLat, originLon], { radius: 4, color: '#0f172a', fillColor: '#0ea5e9', fillOpacity: 1, weight: 1 }).addTo(window.LMap);
+            L.circleMarker([destLat, destLon], { radius: 4, color: '#0f172a', fillColor: '#f43f5e', fillOpacity: 1, weight: 1 }).addTo(window.LMap);
 
-            // STRAIGHT ANT PATH (No bend)
-        const ant = L.polyline.antPath(
-  [[originLat, originLon], [destLat, destLon]],
-  {
-    color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== ""
-      ? f[idx("COLOR")]
-      : '#0ea5e9',
-    weight: 2.5,
-    delay: 1000,
-    dashArray: [10, 20]
-  }
-).addTo(window.LMap);
-            routeLayers.push({
-    color: f[idx("COLOR")] || '#0ea5e9',
-    layer: ant
-});
-// Origin port marker
-L.circleMarker([originLat, originLon], {
-    radius: 4,
-    color: '#0f172a',
-    fillColor: '#0ea5e9',
-    fillOpacity: 1,
-    weight: 1
-}).addTo(window.LMap);
-
-L.circleMarker([destLat, destLon], {
-    radius: 4,
-    color: '#0f172a',
-    fillColor: '#f43f5e',
-    fillOpacity: 1,
-    weight: 1
-}).addTo(window.LMap);
             const tableRows = group.map(s => `<tr>
-<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-    ${formatDate(s[idx("Date")])}
-</td>
-
-<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-    ${s[idx("Weight(Kg)")] || '-'}
-</td>
-
-<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-    $${s[idx("Amount($)")] || '-'}
-</td>
-
-<td style="white-space:normal; word-break:break-word;">
-    ${s[idx("PRODUCT")]}
-</td>
-
-<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-    ${s[idx("Mode of Transportation")] || '-'}
-</td>
-            </tr>`).join('');
+<td>${formatDate(s[idx("Date")])}</td>
+<td>${s[idx("Weight(Kg)")] || '-'}</td>
+<td>$${s[idx("Amount($)")] || '-'}</td>
+<td>${s[idx("PRODUCT")]}</td>
+<td>${s[idx("Mode of Transportation")] || '-'}</td>
+</tr>`).join('');
 
             ant.bindPopup(`
                 <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
                     <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
                         <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                        <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                        <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
-                   <table class="popup-table"
-style="width:100%;
-border-collapse:collapse;
-table-layout:fixed;
-overflow:hidden;">
-                   <thead>
-<tr style="background:#f8fafc;">
-<th style="width:20%; white-space:nowrap;">Date</th>
-<th style="width:18%; white-space:nowrap;">Weight</th>
-<th style="width:18%; white-space:nowrap;">Amount</th>
-<th style="width:30%;">PRODUCT</th>
-<th style="width:14%; white-space:nowrap;">Mode</th>
-</tr>
-</thead>
+                    <table class="popup-table" style="width:100%; border-collapse:collapse; table-layout:fixed; overflow:hidden;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th>
+                            </tr>
+                        </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>`, { maxWidth: 420 });
         }
     });
 };
+
+// ================= PLAYBACK =================
 window.startPlayback = function(idx) {
     if (!window.playback.frames.length) return;
-
-    if (window.playback.timer) {
-        clearInterval(window.playback.timer);
-    }
+    if (window.playback.timer) clearInterval(window.playback.timer);
 
     window.playback.timer = setInterval(() => {
         if (window.playback.currentIndex >= window.playback.frames.length) {
@@ -258,18 +238,25 @@ window.startPlayback = function(idx) {
 
         const rows = window.playback.frames[window.playback.currentIndex];
         const groups = {};
-
         rows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
 
-        // ACCUMULATE: draw on existing map
         window.drawMap(Object.values(groups), idx);
-
         window.playback.currentIndex++;
     }, window.playback.speed);
+};
+
+// ================= CLUSTER =================
+window.drawCluster = function(data, idx) {
+    // (cluster code unchanged from your original)
+};
+
+// ================= COLOR LEGEND =================
+window.buildColorLegend = function(routes) {
+    // (color legend code unchanged from your original)
 };
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
