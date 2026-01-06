@@ -101,21 +101,6 @@ return oMatch && dMatch && opMatch && dpMatch && sMatch;
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
-        // ---------- BUILD PLAYBACK FRAMES (MONTHLY) ----------
-window.playback.frames = [];
-window.playback.currentIndex = 0;
-
-const monthGroups = {};
-filteredRows.forEach(r => {
-    const m = getMonthKey(formatDate(r[idx("Date")]));
-    if (!m) return;
-    if (!monthGroups[m]) monthGroups[m] = [];
-    monthGroups[m].push(r);
-});
-
-window.playback.frames = Object.keys(monthGroups)
-    .sort()
-    .map(m => monthGroups[m]);
 // ---------------------------------------------------
         const groups = {};
         filteredRows.forEach(r => {
@@ -123,8 +108,56 @@ window.playback.frames = Object.keys(monthGroups)
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
-  if (window.currentTab === 'MAP') {
+if (window.currentTab === 'MAP') {
 
+    // ---------- BUILD PLAYBACK FRAMES (MONTHLY) ----------
+    window.playback.frames = [];
+    window.playback.currentIndex = 0;
+
+    const monthGroups = {};
+    filteredRows.forEach(r => {
+        const m = getMonthKey(formatDate(r[idx("Date")])); 
+        if (!m) return;
+        if (!monthGroups[m]) monthGroups[m] = [];
+        monthGroups[m].push(r);
+    });
+
+    window.playback.frames = Object.keys(monthGroups)
+        .sort()
+        .map(m => monthGroups[m]);
+    // ---------------------------------------------------
+
+    // Existing: Draw grouped map
+    const groups = {};
+    filteredRows.forEach(r => {
+        const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
+    });
+
+    // Insert viz controls for playback
+    const frame = document.getElementById('map-frame');
+    frame.insertAdjacentHTML('afterbegin', `
+        <div class="viz-controls">
+            <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
+                onclick="
+                    window.playback.enabled = !window.playback.enabled;
+                    recomputeViz();
+                ">
+                ▶ Playback (Monthly)
+            </button>
+            <span style="font-size:11px;color:#64748b;align-self:center;">
+                Speed: Medium · Unit: Month · Accumulate
+            </span>
+        </div>
+    `);
+
+    // Draw current data
+    window.drawMap(Object.values(groups), idx);
+
+    // Start playback if enabled
+    if (window.playback.enabled) window.startPlayback(idx);
+}
     frame.insertAdjacentHTML('afterbegin', `
         <div class="viz-controls">
 
