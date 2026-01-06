@@ -123,8 +123,30 @@ window.playback.frames = Object.keys(monthGroups)
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
-        if (!window.playback.enabled) {
+  if (window.currentTab === 'MAP') {
+
+    frame.insertAdjacentHTML('afterbegin', `
+        <div class="viz-controls">
+
+            <!-- ▶ Playback -->
+            <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
+                onclick="
+                    window.playback.enabled = !window.playback.enabled;
+                    recomputeViz();
+                ">
+                ▶ Playback (Monthly)
+            </button>
+
+            <!-- Speed info (static for now) -->
+            <span style="font-size:11px;color:#64748b;align-self:center;">
+                Speed: Medium · Unit: Month · Accumulate
+            </span>
+
+        </div>
+    `);
+
     window.drawMap(Object.values(groups), idx);
+}
 } else {
     window.drawMap([], idx); // start empty
     window.startPlayback(idx);
