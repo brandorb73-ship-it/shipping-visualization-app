@@ -74,7 +74,6 @@ window.populateFilters = function() {
     fill('orig-port-filter', 'Origin Port', 'Origin Ports');
 fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 };
-
 window.recomputeViz = function() {
     if (!window.rawData) return;
 
@@ -155,7 +154,6 @@ window.recomputeViz = function() {
         window.drawCluster(filteredRows, idx);
     }
 };
-
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
