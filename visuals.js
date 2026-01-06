@@ -116,7 +116,9 @@ window.drawMap = function(groups, idx) {
                     <td>${s[idx("Date")] || 'N/A'}</td>
                     <td>${s[idx("Weight(Kg)")]}</td>
                     <td>$${s[idx("Amount($)")]}</td>
-                    <td>${s[idx("PRODUCT")]}</td>
+                    <td style="white-space: normal; word-break: break-word;">
+    ${s[idx("PRODUCT")]}
+</td>
                     <td>${s[idx("Mode of Transportation")]}</td>
             </tr>`).join('');
 
@@ -127,16 +129,16 @@ window.drawMap = function(groups, idx) {
                     <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
                         <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
-                    <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
-                        <thead>
-                            <tr style="background: #f8fafc;">
-                                <th style="width:85px; text-align:left;">Date</th>
-                                <th style="width:35px;">Weight(Kg)</th>
-                                <th style="width:60px;">Amount($)</th>
-                                <th style="width:130px;">PRODUCT</th>
-                                <th style="width:40px;">Mode</th>
-                            </tr>
-                        </thead>
+                   <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed; word-wrap: break-word;">
+                       <thead>
+    <tr style="background: #f8fafc;">
+        <th style="width:18%; text-align:left;">Date</th>
+        <th style="width:14%;">Weight</th>
+        <th style="width:18%;">Amount</th>
+        <th style="width:36%;">PRODUCT</th>
+        <th style="width:14%;">Mode</th>
+    </tr>
+</thead>
                         <tbody>${tableRows}</tbody>
                     </table>
                 </div>`, { maxWidth: 420 });
