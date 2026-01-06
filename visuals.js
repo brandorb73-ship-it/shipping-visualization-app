@@ -1,92 +1,81 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+
 // ================= PLAYBACK STATE =================
 window.playback = {
     enabled: false,
     unit: 'MONTH',
-    speed: 800, // ms per frame (medium)
+    speed: 800, // ms per frame
     timer: null,
     frames: [],
     currentIndex: 0
 };
-window.clusterMode = 'COUNTRY'; 
+window.clusterMode = 'COUNTRY';
 
-// FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
-const formatDate = (dateValue) => {
-    if (!dateValue) return 'N/A';
-    window.getMonthKey = function(dateStr) {
+// ================= DATE HELPERS =================
+// Month key for playback
+window.getMonthKey = function(dateStr) {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return null;
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 };
+
+// Format date for display
+const formatDate = (dateValue) => {
+    if (!dateValue) return 'N/A';
     const strVal = String(dateValue).trim();
-    // 1. Try to match YYYY-MM-DD pattern directly from string
     const regex = /(\d{4})-(\d{2})-(\d{2})/;
     const match = strVal.match(regex);
     if (match) return match[0];
-
-    // 2. Fallback to JS Date parsing
     let d = new Date(dateValue);
     if (!isNaN(d.getTime())) {
         const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
+        const m = String(d.getMonth() + 1).padStart(2,'0');
+        const day = String(d.getDate()).padStart(2,'0');
         return `${y}-${m}-${day}`;
     }
-
-    return strVal; 
+    return strVal;
 };
 
-window.downloadPDF = function () {
-    const mapEl = document.getElementById('map-frame');
-
-    // Force Leaflet to redraw into DOM
-    window.LMap.invalidateSize(true);
-
-    html2canvas(mapEl, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        ignoreElements: el => el.classList.contains("leaflet-control")
-    }).then(canvas => {
-        const link = document.createElement('a');
-        link.download = 'BrandOrb_RouteMap.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    });
-};
-
+// ================= FILTERS =================
 window.populateFilters = function() {
     if (!window.rawData || window.rawData.length < 2) return;
-    const h = window.rawData[0];
+    const h = window.rawData[0].map(header => header.trim());
     const data = window.rawData.slice(1);
+
     const fill = (id, col, lbl) => {
-        const i = h.findIndex(header => header.trim() === col);
+        const i = h.findIndex(header => header === col);
         if (i === -1) return;
         const el = document.getElementById(id);
         const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
         el.innerHTML = `<option value="All">All ${lbl}</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
     };
+
     fill('orig-filter', 'Origin Country', 'Countries');
     fill('dest-filter', 'Destination Country', 'Countries');
     fill('orig-port-filter', 'Origin Port', 'Origin Ports');
-fill('dest-port-filter', 'Destination Port', 'Destination Ports');
+    fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 };
+
+// ================= MAIN RECOMPUTE =================
 window.recomputeViz = function() {
     if (!window.rawData) return;
 
-    const search = document.getElementById('ent-search').value.toLowerCase();
-    const origF = document.getElementById('orig-filter').value;
-    const destF = document.getElementById('dest-filter').value;
+    const h = window.rawData[0].map(header => header.trim());
+    const idx = (n) => {
+        const i = h.findIndex(header => header === n);
+        if (i === -1) console.warn(`Column "${n}" not found`);
+        return i;
+    };
+
+    const search = document.getElementById('ent-search')?.value.toLowerCase() || '';
+    const origF = document.getElementById('orig-filter')?.value || 'All';
+    const destF = document.getElementById('dest-filter')?.value || 'All';
     const opF = document.getElementById('orig-port-filter')?.value || 'All';
     const dpF = document.getElementById('dest-port-filter')?.value || 'All';
 
-    const h = window.rawData[0];
-    const idx = (n) => h.findIndex(header => header.trim() === n);
-
-    // Filter rows based on search and filters
     const filteredRows = window.rawData.slice(1).filter(r => {
         const exporter = r[idx("Exporter")] || "";
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
@@ -102,10 +91,10 @@ window.recomputeViz = function() {
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
-
-        // Build playback frames (monthly)
+        // BUILD PLAYBACK
         window.playback.frames = [];
         window.playback.currentIndex = 0;
+
         const monthGroups = {};
         filteredRows.forEach(r => {
             const m = getMonthKey(formatDate(r[idx("Date")]));
@@ -115,7 +104,7 @@ window.recomputeViz = function() {
         });
         window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
 
-        // Draw grouped map
+        // DRAW MAP
         const groups = {};
         filteredRows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
@@ -123,14 +112,10 @@ window.recomputeViz = function() {
             groups[key].push(r);
         });
 
-        // Insert playback controls
+        // Playback controls
         frame.insertAdjacentHTML('afterbegin', `
             <div class="viz-controls">
-                <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
-                    onclick="
-                        window.playback.enabled = !window.playback.enabled;
-                        recomputeViz();
-                    ">
+                <button class="toggle-btn ${window.playback.enabled ? 'active' : ''}" onclick="window.playback.enabled=!window.playback.enabled; recomputeViz();">
                     ▶ Playback (Monthly)
                 </button>
                 <span style="font-size:11px;color:#64748b;align-self:center;">
@@ -139,14 +124,11 @@ window.recomputeViz = function() {
             </div>
         `);
 
-        // Draw map
         window.drawMap(Object.values(groups), idx);
-
-        // Start playback if enabled
         if (window.playback.enabled) window.startPlayback(idx);
 
     } else {
-        // Cluster view
+        // CLUSTER VIEW
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
             <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
@@ -154,6 +136,7 @@ window.recomputeViz = function() {
         window.drawCluster(filteredRows, idx);
     }
 };
+
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
