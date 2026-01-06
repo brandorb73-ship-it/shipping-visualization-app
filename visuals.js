@@ -25,11 +25,21 @@ const formatDate = (dateValue) => {
     return strVal; 
 };
 
-window.downloadPDF = function() {
-    html2canvas(document.getElementById('map-frame'), { useCORS: true }).then(canvas => {
+window.downloadPDF = function () {
+    const mapEl = document.getElementById('map-frame');
+
+    // Force Leaflet to redraw into DOM
+    window.LMap.invalidateSize(true);
+
+    html2canvas(mapEl, {
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        ignoreElements: el => el.classList.contains("leaflet-control")
+    }).then(canvas => {
         const link = document.createElement('a');
-        link.download = 'BrandOrb_Report.png';
-        link.href = canvas.toDataURL();
+        link.download = 'BrandOrb_RouteMap.png';
+        link.href = canvas.toDataURL('image/png');
         link.click();
     });
 };
@@ -47,6 +57,8 @@ window.populateFilters = function() {
     };
     fill('orig-filter', 'Origin Country', 'Countries');
     fill('dest-filter', 'Destination Country', 'Countries');
+    fill('orig-port-filter', 'Origin Port', 'Origin Ports');
+fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 };
 
 window.recomputeViz = function() {
@@ -62,7 +74,12 @@ window.recomputeViz = function() {
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
         const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
         const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
-        return oMatch && dMatch && sMatch;
+const opF = document.getElementById('orig-port-filter')?.value || 'All';
+const dpF = document.getElementById('dest-port-filter')?.value || 'All';
+
+const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
+const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
+return oMatch && dMatch && opMatch && dpMatch && sMatch;
     });
 
     const frame = document.getElementById('map-frame');
@@ -87,10 +104,12 @@ window.recomputeViz = function() {
 };
 
 window.drawMap = function(groups, idx) {
+    const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
+        window.buildColorLegend(routeLayers);
         const f = group[0];
         const lat1 = parseFloat(f[idx("Origin latitude")]);
         const lon1 = parseFloat(f[idx("Origin longitude")]);
@@ -121,6 +140,10 @@ const destLon = lon2 + jitter;
     dashArray: [10, 20]
   }
 ).addTo(window.LMap);
+            routeLayers.push({
+    color: f[idx("COLOR")] || '#0ea5e9',
+    layer: ant
+});
 // Origin port marker
 L.circleMarker([originLat, originLon], {
     radius: 4,
@@ -289,4 +312,44 @@ ${rows.map(r => `
         link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
         node.attr("transform", d=>`translate(${d.x},${d.y})`);
     });
+};
+window.buildColorLegend = function(routes) {
+    const container = document.getElementById("map-frame");
+    document.getElementById("color-legend")?.remove();
+
+    const legend = document.createElement("div");
+    legend.className = "color-legend";
+    legend.id = "color-legend";
+
+    const colors = [...new Set(routes.map(r => r.color))];
+
+    colors.forEach(color => {
+        const row = document.createElement("div");
+        row.className = "color-legend-item";
+        row.dataset.color = color;
+
+        row.innerHTML = `
+            <div class="color-legend-swatch" style="background:${color}"></div>
+            <span>${color}</span>
+        `;
+
+        row.onclick = () => {
+            const active = !row.classList.contains("inactive");
+            document.querySelectorAll(".color-legend-item").forEach(i => i.classList.add("inactive"));
+            if (active) {
+                routes.forEach(r => {
+                    if (r.color === color) r.layer.addTo(window.LMap);
+                    else window.LMap.removeLayer(r.layer);
+                });
+                row.classList.remove("inactive");
+            } else {
+                routes.forEach(r => r.layer.addTo(window.LMap));
+                document.querySelectorAll(".color-legend-item").forEach(i => i.classList.remove("inactive"));
+            }
+        };
+
+        legend.appendChild(row);
+    });
+
+    container.appendChild(legend);
 };
