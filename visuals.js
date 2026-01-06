@@ -77,8 +77,7 @@ window.recomputeViz = function() {
             groups[key].push(r);
         });
         window.drawMap(Object.values(groups), idx);
-        window.drawMap(Object.values(groups), idx);
-window.addColorLegend();
+        window.addColorLegend();
     } else {
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
