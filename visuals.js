@@ -101,23 +101,18 @@ window.drawMap = function(groups, idx) {
         if (!isNaN(lat1) && !isNaN(lat2)) {
 
 // Force Leaflet to respect small coordinate differences
-const originLat = lat1 + (Math.random() * 0.002);
-const originLon = lon1 + (Math.random() * 0.002);
+const jitter = gIdx * 0.015;
 
-const destLat = lat2 + (Math.random() * 0.002);
-const destLon = lon2 + (Math.random() * 0.002);
+const originLat = lat1 + jitter;
+const originLon = lon1 + jitter;
 
+const destLat = lat2 + jitter;
+const destLon = lon2 + jitter;
 
             // STRAIGHT ANT PATH (No bend)
         const ant = L.polyline.antPath(
   [[originLat, originLon], [destLat, destLon]],
   {
-    color: f[idx("COLOR")]?.trim() || '#0ea5e9',
-    weight: 2.5,
-    delay: 1000,
-    dashArray: [10, 20]
-  }
-).addTo(window.LMap);
 // Origin port marker
 L.circleMarker([originLat, originLon], {
     radius: 4,
