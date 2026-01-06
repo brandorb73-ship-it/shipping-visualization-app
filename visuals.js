@@ -115,14 +115,25 @@ window.drawMap = function(groups, idx) {
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                    <td style="white-space:nowrap;">${formatDate(s[idx("Date")])}</td>
-<td style="white-space:nowrap;">${s[idx("Weight(Kg)")]}</td>
-<td style="white-space:nowrap;">$${s[idx("Amount($)")]}</td>
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${formatDate(s[idx("Date")])}
+</td>
+
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${s[idx("Weight(Kg)")] || '-'}
+</td>
+
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    $${s[idx("Amount($)")] || '-'}
+</td>
+
 <td style="white-space:normal; word-break:break-word;">
     ${s[idx("PRODUCT")]}
 </td>
-<td style="white-space:nowrap;">${s[idx("Mode of Transportation")]}</td>
-                    <td>${s[idx("Mode of Transportation")]}</td>
+
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${s[idx("Mode of Transportation")] || '-'}
+</td>
             </tr>`).join('');
 
             ant.bindPopup(`
@@ -132,15 +143,19 @@ window.drawMap = function(groups, idx) {
                     <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
                         <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
-                   <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
-                       <thead>
-    <tr style="background: #f8fafc;">
-        <th style="width:18%; text-align:left; white-space:nowrap;">Date</th>
-        <th style="width:14%; white-space:nowrap;">Weight</th>
-        <th style="width:18%; white-space:nowrap;">Amount</th>
-        <th style="width:36%;">PRODUCT</th>
-        <th style="width:14%; white-space:nowrap;">Mode</th>
-    </tr>
+                   <table class="popup-table"
+style="width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+overflow:hidden;">
+                   <thead>
+<tr style="background:#f8fafc;">
+<th style="width:20%; white-space:nowrap;">Date</th>
+<th style="width:18%; white-space:nowrap;">Weight</th>
+<th style="width:18%; white-space:nowrap;">Amount</th>
+<th style="width:30%;">PRODUCT</th>
+<th style="width:14%; white-space:nowrap;">Mode</th>
+</tr>
 </thead>
                         <tbody>${tableRows}</tbody>
                     </table>
@@ -181,9 +196,15 @@ if (!window._tradeAgg[tradeKey]) {
 }
 
 window._tradeAgg[tradeKey].rows.push(r);
+if (window.clusterMode !== 'COUNTRY') {
+    links.push({source: exp, target: imp, type: 'trade', data: r});
+}      
         links.push({source: gp, target: exp, type: 'link'}, {source: dp, target: imp, type: 'link'});
     });
-
+if (window.clusterMode === 'COUNTRY' && window._tradeAgg) {
+    Object.values(window._tradeAgg).forEach(l => links.push(l));
+    window._tradeAgg = null;
+}
     const sim = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-300))
@@ -223,21 +244,24 @@ window._tradeAgg[tradeKey].rows.push(r);
 
     // FIXED: Added Quantity to Popup
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
+    const rows = d.rows || [d.data];
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
-          .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-<strong>${d.rows[0][idx("Exporter")]} → ${d.rows[0][idx("Importer")]}</strong>
+.html(`
+<span class="pop-close" onclick="this.parentElement.remove()">×</span>
+<strong>${rows[0][idx("Exporter")]} → ${rows[0][idx("Importer")]}</strong>
 <table class="popup-table" style="margin-top:6px;">
 <tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th></tr>
-${d.rows.map(r => `
+${rows.map(r => `
 <tr>
-<td style="white-space:nowrap;">${formatDate(r[idx("Date")])}</td>
-<td style="white-space:nowrap;">${r[idx("Quantity")] || '-'}</td>
-<td style="white-space:nowrap;">$${r[idx("Amount($)")]}</td>
-<td style="white-space:normal;">${r[idx("PRODUCT")]}</td>
+<td>${formatDate(r[idx("Date")])}</td>
+<td>${r[idx("Quantity")] || '-'}</td>
+<td>$${r[idx("Amount($)")]}</td>
+<td>${r[idx("PRODUCT")]}</td>
 </tr>`).join("")}
-</table>`);
+</table>
+`);
     });
 
     sim.on("tick", () => {
