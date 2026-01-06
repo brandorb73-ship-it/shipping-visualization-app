@@ -113,6 +113,14 @@ const destLon = lon2 + jitter;
         const ant = L.polyline.antPath(
   [[originLat, originLon], [destLat, destLon]],
   {
+    color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== ""
+      ? f[idx("COLOR")]
+      : '#0ea5e9',
+    weight: 2.5,
+    delay: 1000,
+    dashArray: [10, 20]
+  }
+).addTo(window.LMap);
 // Origin port marker
 L.circleMarker([originLat, originLon], {
     radius: 4,
@@ -120,39 +128,15 @@ L.circleMarker([originLat, originLon], {
     fillColor: '#0ea5e9',
     fillOpacity: 1,
     weight: 1
-})
-.addTo(window.LMap)
-.bindTooltip(
-    `<b>Origin Port:</b> ${f[idx("Origin Port")] || 'N/A'}<br>
-     <b>Lat:</b> ${lat1}<br>
-     <b>Lon:</b> ${lon1}`,
-    { direction: 'top', sticky: true }
-);
+}).addTo(window.LMap);
 
-// Destination port marker
 L.circleMarker([destLat, destLon], {
     radius: 4,
     color: '#0f172a',
     fillColor: '#f43f5e',
     fillOpacity: 1,
     weight: 1
-})
-.addTo(window.LMap)
-.bindTooltip(
-    `<b>Destination Port:</b> ${f[idx("Destination Port")] || 'N/A'}<br>
-     <b>Lat:</b> ${lat2}<br>
-     <b>Lon:</b> ${lon2}`,
-    { direction: 'top', sticky: true }
-);
-            
-                color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== "" 
-    ? f[idx("COLOR")] 
-    : '#0ea5e9',
-                weight: 2.5, 
-                delay: 1000,
-                dashArray: [10, 20]
-            }).addTo(window.LMap);
-
+}).addTo(window.LMap);
             const tableRows = group.map(s => `<tr>
 <td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
     ${formatDate(s[idx("Date")])}
