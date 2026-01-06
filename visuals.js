@@ -78,7 +78,6 @@ window.recomputeViz = function() {
         });
         window.drawMap(Object.values(groups), idx);
     } else {
-        window.addColorLegend();
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
             <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
@@ -290,43 +289,4 @@ ${rows.map(r => `
         link.attr("x1", d=>d.source.x).attr("y1", d=>d.source.y).attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
         node.attr("transform", d=>`translate(${d.x},${d.y})`);
     });
-    window.addColorLegend = function () {
-    if (!window.rawData) return;
-
-    const h = window.rawData[0];
-    const idx = h.findIndex(c => c.trim() === "COLOR");
-    if (idx === -1) return;
-
-    const colors = [...new Set(
-        window.rawData.slice(1)
-            .map(r => r[idx])
-            .filter(c => c && c.trim())
-    )];
-
-    if (!colors.length) return;
-
-    const legend = document.createElement("div");
-    legend.style.position = "absolute";
-    legend.style.bottom = "16px";
-    legend.style.left = "16px";
-    legend.style.background = "white";
-    legend.style.padding = "8px 10px";
-    legend.style.borderRadius = "6px";
-    legend.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-    legend.style.fontSize = "11px";
-    legend.style.fontFamily = "sans-serif";
-    legend.style.zIndex = 999;
-
-    legend.innerHTML = `
-        <div style="font-weight:bold; margin-bottom:6px;">Route Legend</div>
-        ${colors.map(c => `
-            <div style="display:flex; align-items:center; margin-bottom:4px;">
-                <span style="width:14px; height:4px; background:${c}; display:inline-block; margin-right:6px;"></span>
-                <span>${c}</span>
-            </div>
-        `).join("")}
-    `;
-
-    document.getElementById("map-frame").appendChild(legend);
-};
 };
