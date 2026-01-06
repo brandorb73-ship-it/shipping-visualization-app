@@ -72,7 +72,7 @@ window.recomputeViz = function() {
     if (window.currentTab === 'MAP') {
         const groups = {};
         filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}`;
+           const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
@@ -99,17 +99,57 @@ window.drawMap = function(groups, idx) {
         const lon2 = parseFloat(f[idx("Destination longitude")]);
 
         if (!isNaN(lat1) && !isNaN(lat2)) {
-// MICRO-JITTER to separate very close ports (e.g. Shekou vs Nansha)
-const jitter = 0.015; // ~1.6km, visually distinct but accurate
 
-const originLat = lat1 + ((gIdx % 3) - 1) * jitter;
-const originLon = lon1 + ((gIdx % 3) - 1) * jitter;
+// Force Leaflet to respect small coordinate differences
+const originLat = lat1 + (Math.random() * 0.002);
+const originLon = lon1 + (Math.random() * 0.002);
 
-const destLat = lat2 + ((gIdx % 3) - 1) * jitter;
-const destLon = lon2 + ((gIdx % 3) - 1) * jitter;
+const destLat = lat2 + (Math.random() * 0.002);
+const destLon = lon2 + (Math.random() * 0.002);
+
 
             // STRAIGHT ANT PATH (No bend)
-         const ant = L.polyline.antPath([[originLat, originLon], [destLat, destLon]], {
+        const ant = L.polyline.antPath(
+  [[originLat, originLon], [destLat, destLon]],
+  {
+    color: f[idx("COLOR")]?.trim() || '#0ea5e9',
+    weight: 2.5,
+    delay: 1000,
+    dashArray: [10, 20]
+  }
+).addTo(window.LMap);
+// Origin port marker
+L.circleMarker([originLat, originLon], {
+    radius: 4,
+    color: '#0f172a',
+    fillColor: '#0ea5e9',
+    fillOpacity: 1,
+    weight: 1
+})
+.addTo(window.LMap)
+.bindTooltip(
+    `<b>Origin Port:</b> ${f[idx("Origin Port")] || 'N/A'}<br>
+     <b>Lat:</b> ${lat1}<br>
+     <b>Lon:</b> ${lon1}`,
+    { direction: 'top', sticky: true }
+);
+
+// Destination port marker
+L.circleMarker([destLat, destLon], {
+    radius: 4,
+    color: '#0f172a',
+    fillColor: '#f43f5e',
+    fillOpacity: 1,
+    weight: 1
+})
+.addTo(window.LMap)
+.bindTooltip(
+    `<b>Destination Port:</b> ${f[idx("Destination Port")] || 'N/A'}<br>
+     <b>Lat:</b> ${lat2}<br>
+     <b>Lon:</b> ${lon2}`,
+    { direction: 'top', sticky: true }
+);
+            
                 color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== "" 
     ? f[idx("COLOR")] 
     : '#0ea5e9',
