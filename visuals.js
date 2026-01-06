@@ -11,16 +11,15 @@ window.playback = {
     frames: [],
     currentIndex: 0
 };
-
 window.clusterMode = 'COUNTRY';
-window.currentTab = 'MAP'; // Default tab; set 'CLUSTER' when switching
+window.currentTab = 'MAP'; // default tab
 
 // ================= DATE HELPERS =================
 window.getMonthKey = function(dateStr) {
     if (!dateStr) return null;
     const d = new Date(dateStr);
     if (isNaN(d)) return null;
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 };
 
 const formatDate = (dateValue) => {
@@ -88,23 +87,30 @@ window.recomputeViz = function() {
 
     const frame = document.getElementById('map-frame');
     frame.innerHTML = "";
-    if (window.LMap) { window.LMap.remove(); window.LMap = null; }
+
+    // ===== TAB SWITCH CONTROLS =====
+    frame.insertAdjacentHTML('afterbegin', `
+        <div class="viz-controls" style="margin-bottom:6px;">
+            <button class="toggle-btn ${window.currentTab==='MAP'?'active':''}" onclick="window.currentTab='MAP'; recomputeViz();">Map View</button>
+            <button class="toggle-btn ${window.currentTab==='CLUSTER'?'active':''}" onclick="window.currentTab='CLUSTER'; recomputeViz();">Cluster View</button>
+        </div>
+    `);
 
     if (window.currentTab === 'MAP') {
-        // ================= MAP & PLAYBACK =================
-        // Build monthly frames for playback
+        // BUILD PLAYBACK
         window.playback.frames = [];
         window.playback.currentIndex = 0;
+
         const monthGroups = {};
         filteredRows.forEach(r => {
-            const m = getMonthKey(formatDate(r[idx("Date")]));
+            const m = getMonthKey(formatDate(r[idx("Date")] ));
             if (!m) return;
             if (!monthGroups[m]) monthGroups[m] = [];
             monthGroups[m].push(r);
         });
         window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
 
-        // Group rows for route drawing
+        // DRAW MAP GROUPS
         const groups = {};
         filteredRows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
@@ -112,8 +118,8 @@ window.recomputeViz = function() {
             groups[key].push(r);
         });
 
-        // Playback controls
-        frame.insertAdjacentHTML('afterbegin', `
+        // ===== MAP PLAYBACK BUTTON =====
+        frame.insertAdjacentHTML('beforeend', `
             <div class="viz-controls">
                 <button class="toggle-btn ${window.playback.enabled ? 'active' : ''}"
                     onclick="window.playback.enabled = !window.playback.enabled; recomputeViz();">
@@ -126,16 +132,10 @@ window.recomputeViz = function() {
         `);
 
         window.drawMap(Object.values(groups), idx);
-
         if (window.playback.enabled) window.startPlayback(idx);
 
-    } else {
-        // ================= CLUSTER VIEW =================
-        frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
-            <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
-            <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
-        </div>`);
-
+    } else if (window.currentTab === 'CLUSTER') {
+        // CLUSTER VIEW
         window.drawCluster(filteredRows, idx);
     }
 };
@@ -143,7 +143,7 @@ window.recomputeViz = function() {
 // ================= DRAW MAP =================
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
-    window.LMap = L.map('map-frame').setView([20, 0], 2);
+    window.LMap = L.map('map-frame').setView([20,0],2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
@@ -153,6 +153,7 @@ window.drawMap = function(groups, idx) {
         const lon1 = parseFloat(f[idx("Origin longitude")]);
         const lat2 = parseFloat(f[idx("Destination latitude")]);
         const lon2 = parseFloat(f[idx("Destination longitude")]);
+
         if (!isNaN(lat1) && !isNaN(lat2)) {
             const jitter = gIdx * 0.015;
             const originLat = lat1 + jitter;
@@ -160,47 +161,44 @@ window.drawMap = function(groups, idx) {
             const destLat = lat2 + jitter;
             const destLon = lon2 + jitter;
 
-            const ant = L.polyline.antPath([[originLat, originLon],[destLat,destLon]],{
+            const ant = L.polyline.antPath([[originLat, originLon],[destLat, destLon]],{
                 color: f[idx("COLOR")]?.trim() || '#0ea5e9',
                 weight: 2.5,
                 delay: 1000,
                 dashArray: [10,20]
             }).addTo(window.LMap);
 
-            routeLayers.push({ color: f[idx("COLOR")] || '#0ea5e9', layer: ant });
+            routeLayers.push({color:f[idx("COLOR")] || '#0ea5e9', layer:ant});
 
-            // Markers
-            L.circleMarker([originLat, originLon], { radius: 4, color:'#0f172a', fillColor:'#0ea5e9', fillOpacity:1, weight:1 }).addTo(window.LMap);
-            L.circleMarker([destLat, destLon], { radius: 4, color:'#0f172a', fillColor:'#f43f5e', fillOpacity:1, weight:1 }).addTo(window.LMap);
+            L.circleMarker([originLat, originLon], {radius:4, color:'#0f172a', fillColor:'#0ea5e9', fillOpacity:1, weight:1}).addTo(window.LMap);
+            L.circleMarker([destLat, destLon], {radius:4, color:'#0f172a', fillColor:'#f43f5e', fillOpacity:1, weight:1}).addTo(window.LMap);
 
-            const tableRows = group.map(s => `<tr>
+            const tableRows = group.map(s => `
+<tr>
 <td>${formatDate(s[idx("Date")])}</td>
-<td>${s[idx("Weight(Kg)")]||'-'}</td>
-<td>$${s[idx("Amount($)")]||'-'}</td>
+<td>${s[idx("Weight(Kg)")] || '-'}</td>
+<td>$${s[idx("Amount($)")] || '-'}</td>
 <td>${s[idx("PRODUCT")]}</td>
-<td>${s[idx("Mode of Transportation")]||'-'}</td>
+<td>${s[idx("Mode of Transportation")] || '-'}</td>
 </tr>`).join('');
 
-            ant.bindPopup(`<div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-                <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")]||'#0ea5e9'}; padding-top:6px;">
-                    <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                    <b>Ports:</b> ${f[idx("Origin Port") ]||'N/A'} → ${f[idx("Destination Port")]||'N/A'}
-                </div>
-                <table class="popup-table" style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr style="background:#f8fafc;"><th>Date</th><th>Weight</th><th>Amount</th><th>Product</th><th>Mode</th></tr>
-                    </thead>
-                    <tbody>${tableRows}</tbody>
-                </table>
-            </div>`, { maxWidth:420 });
+            ant.bindPopup(`
+<div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
+<div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
+<b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+<b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+<b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}</div>
+<table class="popup-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+<thead><tr style="background:#f8fafc;">
+<th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th></tr>
+</thead><tbody>${tableRows}</tbody></table></div>`, {maxWidth:420});
         }
     });
 };
 
 // ================= PLAYBACK =================
 window.startPlayback = function(idx) {
-    if (!window.playback.frames.length || window.currentTab !== 'MAP') return;
+    if (!window.playback.frames.length) return;
     if (window.playback.timer) clearInterval(window.playback.timer);
 
     window.playback.timer = setInterval(() => {
@@ -208,7 +206,6 @@ window.startPlayback = function(idx) {
             clearInterval(window.playback.timer);
             return;
         }
-
         const rows = window.playback.frames[window.playback.currentIndex];
         const groups = {};
         rows.forEach(r => {
@@ -216,82 +213,94 @@ window.startPlayback = function(idx) {
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
-
         window.drawMap(Object.values(groups), idx);
         window.playback.currentIndex++;
     }, window.playback.speed);
 };
 
-// ================= DRAW CLUSTER =================
+// ================= CLUSTER =================
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
-    const svg = d3.select("#map-frame").append("svg").attr("width", "100%").attr("height", "100%");
+    const svg = d3.select("#map-frame").append("svg").attr("width","100%").attr("height","100%");
     const g = svg.append("g");
-    svg.call(d3.zoom().on("zoom", (e) => g.attr("transform", e.transform)));
+    svg.call(d3.zoom().on("zoom",(e)=>g.attr("transform",e.transform)));
 
-    let nodes = [], links = [], nodeSet = new Set();
-    data.forEach(r => {
+    let nodes=[], links=[], nodeSet = new Set();
+    if (!window._tradeAgg) window._tradeAgg = {};
+
+    data.forEach(r=>{
         const exp = r[idx("Exporter")], imp = r[idx("Importer")];
-        const gp = window.clusterMode==='COUNTRY'? r[idx("Origin Country")]: r[idx("PRODUCT")];
-        const dp = window.clusterMode==='COUNTRY'? r[idx("Destination Country")]: r[idx("PRODUCT")];
-        if(!exp||!imp||!gp) return;
-        [gp,dp].forEach(p=>{ if(!nodeSet.has(p)){ nodes.push({id:p,type:'parent'}); nodeSet.add(p); }});
-        if(!nodeSet.has(exp)){ nodes.push({id:exp,type:'exp'}); nodeSet.add(exp);}
-        if(!nodeSet.has(imp)){ nodes.push({id:imp,type:'imp'}); nodeSet.add(imp);}
-        const tradeKey = exp+"→"+imp;
-        if(!window._tradeAgg) window._tradeAgg={};
-        if(!window._tradeAgg[tradeKey]) window._tradeAgg[tradeKey]={source:exp,target:imp,type:'trade',rows:[]};
+        const gp = window.clusterMode==='COUNTRY'? r[idx("Origin Country")] : r[idx("PRODUCT")];
+        const dp = window.clusterMode==='COUNTRY'? r[idx("Destination Country")] : r[idx("PRODUCT")];
+        if (!exp || !imp || !gp) return;
+        [gp,dp].forEach(p=>{if(!nodeSet.has(p)){nodes.push({id:p,type:'parent'}); nodeSet.add(p);}});
+        if(!nodeSet.has(exp)){nodes.push({id:exp,type:'exp'}); nodeSet.add(exp);}
+        if(!nodeSet.has(imp)){nodes.push({id:imp,type:'imp'}); nodeSet.add(imp);}
+
+        const tradeKey = exp + '→' + imp;
+        if (!window._tradeAgg[tradeKey]) window._tradeAgg[tradeKey] = {source:exp,target:imp,type:'trade',rows:[]};
         window._tradeAgg[tradeKey].rows.push(r);
+
         if(window.clusterMode!=='COUNTRY') links.push({source:exp,target:imp,type:'trade',data:r});
         links.push({source:gp,target:exp,type:'link'},{source:dp,target:imp,type:'link'});
     });
-    if(window.clusterMode==='COUNTRY' && window._tradeAgg){ Object.values(window._tradeAgg).forEach(l=>links.push(l)); window._tradeAgg=null; }
+
+    if(window.clusterMode==='COUNTRY'){
+        Object.values(window._tradeAgg).forEach(l=>links.push(l));
+        window._tradeAgg = {};
+    }
 
     const sim = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d=>d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-300))
-        .force("center", d3.forceCenter(width/2, height/2));
+        .force("center", d3.forceCenter(width/2,height/2));
 
     const link = g.append("g").selectAll("line").data(links).enter().append("line")
         .attr("stroke", d=>d.type==='link'?"#e2e8f0":"#94a3b8").attr("stroke-width",2);
 
     const node = g.append("g").selectAll("g").data(nodes).enter().append("g")
-        .call(d3.drag()
-            .on("start",(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
-            .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y})
-            .on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+        .call(d3.drag().on("start",(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y;})
+        .on("drag",(e,d)=>{d.fx=e.x; d.fy=e.y;}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0); d.fx=null; d.fy=null;}));
 
-    node.append("circle")
-        .attr("r", d=>d.type==='parent'?22:14)
-        .attr("fill", d=>d.type==='parent'? '#1e293b':(d.type==='exp'? '#0ea5e9':'#f43f5e'))
-        .attr("stroke","#fff").attr("stroke-width",2);
+    node.append("circle").attr("r",d=>d.type==='parent'?22:14).attr("fill",d=>d.type==='parent'?'#1e293b':(d.type==='exp'?'#0ea5e9':'#f43f5e')).attr("stroke","#fff").attr("stroke-width",2);
 
-    node.append("foreignObject")
-        .attr("width",30).attr("height",30).attr("x",-15).attr("y",-15)
-        .style("pointer-events","none")
-        .html(d=>{let ic="fa-globe"; if(d.type==='exp')ic="fa-building"; if(d.type==='imp')ic="fa-store"; return `<div style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;"><i class="fas ${ic}" style="color:white;font-size:${d.type==='parent'?'16px':'12px'};"></i></div>`});
+    node.append("foreignObject").attr("width",30).attr("height",30).attr("x",-15).attr("y",-15).style("pointer-events","none").html(d=>{
+        let iconClass="fa-globe";
+        if(d.type==='exp') iconClass='fa-building';
+        if(d.type==='imp') iconClass='fa-store';
+        return `<div style="display:flex; align-items:center; justify-content:center; width:30px; height:30px;"><i class="fas ${iconClass}" style="color:white; font-size:${d.type==='parent'?'16px':'12px'};"></i></div>`;
+    });
 
     node.append("text").text(d=>d.id).attr("y",35).attr("text-anchor","middle").style("font-size","9px").style("font-weight","bold");
 
     link.filter(d=>d.type==='trade').on("click",(e,d)=>{
-        const rows=d.rows||[d.data];
+        const rows = d.rows || [d.data];
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class","cluster-pop")
-        .style("left",e.offsetX+"px").style("top",e.offsetY+"px")
-        .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-        <strong>${rows[0][idx("Exporter")]} → ${rows[0][idx("Importer")]}</strong>
-        <table class="popup-table" style="margin-top:6px;">
-        <tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th></tr>
-        ${rows.map(r=>`<tr><td>${formatDate(r[idx("Date")])}</td><td>${r[idx("Quantity")]||'-'}</td><td>$${r[idx("Amount($)")]}</td><td>${r[idx("PRODUCT")]}</td></tr>`).join("")}
-        </table>`);
+            .style("left",e.offsetX+"px").style("top",e.offsetY+"px")
+            .html(`
+<span class="pop-close" onclick="this.parentElement.remove()">×</span>
+<strong>${rows[0][idx("Exporter")]} → ${rows[0][idx("Importer")]}</strong>
+<table class="popup-table" style="margin-top:6px;">
+<tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th></tr>
+${rows.map(r=>`<tr>
+<td>${formatDate(r[idx("Date")])}</td>
+<td>${r[idx("Quantity")]||'-'}</td>
+<td>$${r[idx("Amount($)")]}</td>
+<td>${r[idx("PRODUCT")]}</td>
+</tr>`).join('')}
+</table>`); 
     });
 
-    sim.on("tick", ()=>{link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y); node.attr("transform",d=>`translate(${d.x},${d.y})`);});
+    sim.on("tick",()=>{
+        link.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
+        node.attr("transform",d=>`translate(${d.x},${d.y})`);
+    });
 };
 
 // ================= COLOR LEGEND =================
-window.buildColorLegend = function(routes) {
+window.buildColorLegend = function(routes){
     const container = document.getElementById("map-frame");
     document.getElementById("color-legend")?.remove();
 
@@ -300,19 +309,16 @@ window.buildColorLegend = function(routes) {
     legend.id="color-legend";
 
     const colors = [...new Set(routes.map(r=>r.color))];
-
     colors.forEach(color=>{
-        const row=document.createElement("div");
+        const row = document.createElement("div");
         row.className="color-legend-item";
         row.dataset.color=color;
-
         row.innerHTML=`<div class="color-legend-swatch" style="background:${color}"></div><span>${color}</span>`;
-
-        row.onclick=()=>{
-            const active=!row.classList.contains("inactive");
+        row.onclick = ()=>{
+            const active = !row.classList.contains("inactive");
             document.querySelectorAll(".color-legend-item").forEach(i=>i.classList.add("inactive"));
             if(active){
-                routes.forEach(r=>{if(r.color===color) r.layer.addTo(window.LMap); else window.LMap.removeLayer(r.layer);});
+                routes.forEach(r=>{ if(r.color===color) r.layer.addTo(window.LMap); else window.LMap.removeLayer(r.layer); });
                 row.classList.remove("inactive");
             } else {
                 routes.forEach(r=>r.layer.addTo(window.LMap));
