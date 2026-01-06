@@ -77,23 +77,25 @@ fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 
 window.recomputeViz = function() {
     if (!window.rawData) return;
+
     const search = document.getElementById('ent-search').value.toLowerCase();
     const origF = document.getElementById('orig-filter').value;
     const destF = document.getElementById('dest-filter').value;
+    const opF = document.getElementById('orig-port-filter')?.value || 'All';
+    const dpF = document.getElementById('dest-port-filter')?.value || 'All';
+
     const h = window.rawData[0];
     const idx = (n) => h.findIndex(header => header.trim() === n);
 
+    // Filter rows based on search and filters
     const filteredRows = window.rawData.slice(1).filter(r => {
         const exporter = r[idx("Exporter")] || "";
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
         const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
         const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
-const opF = document.getElementById('orig-port-filter')?.value || 'All';
-const dpF = document.getElementById('dest-port-filter')?.value || 'All';
-
-const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
-const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
-return oMatch && dMatch && opMatch && dpMatch && sMatch;
+        const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
+        const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
+        return oMatch && dMatch && opMatch && dpMatch && sMatch;
     });
 
     const frame = document.getElementById('map-frame');
@@ -101,89 +103,51 @@ return oMatch && dMatch && opMatch && dpMatch && sMatch;
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
-// ---------------------------------------------------
+
+        // Build playback frames (monthly)
+        window.playback.frames = [];
+        window.playback.currentIndex = 0;
+        const monthGroups = {};
+        filteredRows.forEach(r => {
+            const m = getMonthKey(formatDate(r[idx("Date")]));
+            if (!m) return;
+            if (!monthGroups[m]) monthGroups[m] = [];
+            monthGroups[m].push(r);
+        });
+        window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
+
+        // Draw grouped map
         const groups = {};
         filteredRows.forEach(r => {
-           const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
-if (window.currentTab === 'MAP') {
 
-    // ---------- BUILD PLAYBACK FRAMES (MONTHLY) ----------
-    window.playback.frames = [];
-    window.playback.currentIndex = 0;
+        // Insert playback controls
+        frame.insertAdjacentHTML('afterbegin', `
+            <div class="viz-controls">
+                <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
+                    onclick="
+                        window.playback.enabled = !window.playback.enabled;
+                        recomputeViz();
+                    ">
+                    ▶ Playback (Monthly)
+                </button>
+                <span style="font-size:11px;color:#64748b;align-self:center;">
+                    Speed: Medium · Unit: Month · Accumulate
+                </span>
+            </div>
+        `);
 
-    const monthGroups = {};
-    filteredRows.forEach(r => {
-        const m = getMonthKey(formatDate(r[idx("Date")])); 
-        if (!m) return;
-        if (!monthGroups[m]) monthGroups[m] = [];
-        monthGroups[m].push(r);
-    });
+        // Draw map
+        window.drawMap(Object.values(groups), idx);
 
-    window.playback.frames = Object.keys(monthGroups)
-        .sort()
-        .map(m => monthGroups[m]);
-    // ---------------------------------------------------
+        // Start playback if enabled
+        if (window.playback.enabled) window.startPlayback(idx);
 
-    // Existing: Draw grouped map
-    const groups = {};
-    filteredRows.forEach(r => {
-        const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(r);
-    });
-
-    // Insert viz controls for playback
-    const frame = document.getElementById('map-frame');
-    frame.insertAdjacentHTML('afterbegin', `
-        <div class="viz-controls">
-            <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
-                onclick="
-                    window.playback.enabled = !window.playback.enabled;
-                    recomputeViz();
-                ">
-                ▶ Playback (Monthly)
-            </button>
-            <span style="font-size:11px;color:#64748b;align-self:center;">
-                Speed: Medium · Unit: Month · Accumulate
-            </span>
-        </div>
-    `);
-
-    // Draw current data
-    window.drawMap(Object.values(groups), idx);
-
-    // Start playback if enabled
-    if (window.playback.enabled) window.startPlayback(idx);
-}
-    frame.insertAdjacentHTML('afterbegin', `
-        <div class="viz-controls">
-
-            <!-- ▶ Playback -->
-            <button class="toggle-btn ${window.playback?.enabled ? 'active' : ''}"
-                onclick="
-                    window.playback.enabled = !window.playback.enabled;
-                    recomputeViz();
-                ">
-                ▶ Playback (Monthly)
-            </button>
-
-            <!-- Speed info (static for now) -->
-            <span style="font-size:11px;color:#64748b;align-self:center;">
-                Speed: Medium · Unit: Month · Accumulate
-            </span>
-
-        </div>
-    `);
-
-    window.drawMap(Object.values(groups), idx);
-}
-} else {
-    window.drawMap([], idx); // start empty
-    window.startPlayback(idx);
-}
+    } else {
+        // Cluster view
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
             <button class="toggle-btn ${window.clusterMode==='PRODUCT'?'active':''}" onclick="window.clusterMode='PRODUCT'; recomputeViz()">Group by Product</button>
