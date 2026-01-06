@@ -68,6 +68,35 @@
     font-weight: bold;
     color: #64748b;
 } 
+        /* ===== ROUTE COLOR LEGEND ===== */
+.color-legend {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 11px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    z-index: 1000;
+}
+.color-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    margin-bottom: 4px;
+}
+.color-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid #cbd5e1;
+}
+.color-legend-item.inactive {
+    opacity: 0.3;
+}
     <style>
    /* Container for the logo - The "White Tile" */
 .logo-slot { 
@@ -182,6 +211,8 @@
                     <input type="text" id="ent-search" class="input-s" placeholder="Search Entity/Product..." onkeyup="window.recomputeViz()">
                     <select id="orig-filter" class="input-s" onchange="window.recomputeViz()"></select>
                     <select id="dest-filter" class="input-s" onchange="window.recomputeViz()"></select>
+<select id="orig-port-filter" class="input-s" onchange="window.recomputeViz()"></select>
+<select id="dest-port-filter" class="input-s" onchange="window.recomputeViz()"></select>
                     <button class="btn-p" onclick="window.downloadPDF()"><i class="fas fa-file-pdf"></i> Download PNG</button>
                 </div>
             </header>
