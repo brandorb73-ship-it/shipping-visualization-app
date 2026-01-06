@@ -106,37 +106,40 @@ window.drawMap = function(groups, idx) {
 
             // STRAIGHT ANT PATH (No bend)
             const ant = L.polyline.antPath([[lat1, lon1], [finalDestLat, finalDestLon]], { 
-                color: f[idx("COLOR")] || '#0ea5e9', 
+                color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== "" 
+    ? f[idx("COLOR")] 
+    : '#0ea5e9',
                 weight: 2.5, 
                 delay: 1000,
                 dashArray: [10, 20]
             }).addTo(window.LMap);
 
             const tableRows = group.map(s => `<tr>
-                    <td>${s[idx("Date")] || 'N/A'}</td>
-                    <td>${s[idx("Weight(Kg)")]}</td>
-                    <td>$${s[idx("Amount($)")]}</td>
-                    <td style="white-space: normal; word-break: break-word;">
+                    <td style="white-space:nowrap;">${formatDate(s[idx("Date")])}</td>
+<td style="white-space:nowrap;">${s[idx("Weight(Kg)")]}</td>
+<td style="white-space:nowrap;">$${s[idx("Amount($)")]}</td>
+<td style="white-space:normal; word-break:break-word;">
     ${s[idx("PRODUCT")]}
 </td>
+<td style="white-space:nowrap;">${s[idx("Mode of Transportation")]}</td>
                     <td>${s[idx("Mode of Transportation")]}</td>
             </tr>`).join('');
 
             ant.bindPopup(`
                 <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-                    <div style="margin-bottom:8px;">
+                    <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
                         <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
                     <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
                         <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
                     </div>
-                   <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed; word-wrap: break-word;">
+                   <table class="popup-table" style="width:100%; border-collapse: collapse; table-layout: fixed;">
                        <thead>
     <tr style="background: #f8fafc;">
-        <th style="width:18%; text-align:left;">Date</th>
-        <th style="width:14%;">Weight</th>
-        <th style="width:18%;">Amount</th>
+        <th style="width:18%; text-align:left; white-space:nowrap;">Date</th>
+        <th style="width:14%; white-space:nowrap;">Weight</th>
+        <th style="width:18%; white-space:nowrap;">Amount</th>
         <th style="width:36%;">PRODUCT</th>
-        <th style="width:14%;">Mode</th>
+        <th style="width:14%; white-space:nowrap;">Mode</th>
     </tr>
 </thead>
                         <tbody>${tableRows}</tbody>
@@ -155,6 +158,8 @@ window.drawCluster = function(data, idx) {
 
     let nodes = [], links = [], nodeSet = new Set();
     data.forEach(r => {
+        Object.values(window._tradeAgg || {}).forEach(l => links.push(l));
+window._tradeAgg = null;
         const exp = r[idx("Exporter")], imp = r[idx("Importer")];
         const gp = window.clusterMode === 'COUNTRY' ? r[idx("Origin Country")] : r[idx("PRODUCT")];
         const dp = window.clusterMode === 'COUNTRY' ? r[idx("Destination Country")] : r[idx("PRODUCT")];
@@ -162,7 +167,20 @@ window.drawCluster = function(data, idx) {
         [gp, dp].forEach(p => { if(!nodeSet.has(p)) { nodes.push({id: p, type: 'parent'}); nodeSet.add(p); }});
         if(!nodeSet.has(exp)) { nodes.push({id: exp, type: 'exp'}); nodeSet.add(exp); }
         if(!nodeSet.has(imp)) { nodes.push({id: imp, type: 'imp'}); nodeSet.add(imp); }
-        links.push({source: exp, target: imp, type: 'trade', data: r});
+        const tradeKey = exp + "→" + imp;
+
+if (!window._tradeAgg) window._tradeAgg = {};
+
+if (!window._tradeAgg[tradeKey]) {
+    window._tradeAgg[tradeKey] = {
+        source: exp,
+        target: imp,
+        type: 'trade',
+        rows: []
+    };
+}
+
+window._tradeAgg[tradeKey].rows.push(r);
         links.push({source: gp, target: exp, type: 'link'}, {source: dp, target: imp, type: 'link'});
     });
 
@@ -208,11 +226,18 @@ window.drawCluster = function(data, idx) {
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
-            .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
-                <strong>${d.data[idx("PRODUCT")]}</strong><br>
-                Date: ${formatDate(d.data[idx("Date")])}<br>
-                Qty: ${d.data[idx("Quantity")] || '-'}<br>
-                Value: $${d.data[idx("Amount($)")]}`);
+          .html(`<span class="pop-close" onclick="this.parentElement.remove()">×</span>
+<strong>${d.rows[0][idx("Exporter")]} → ${d.rows[0][idx("Importer")]}</strong>
+<table class="popup-table" style="margin-top:6px;">
+<tr><th>Date</th><th>Qty</th><th>Value</th><th>Product</th></tr>
+${d.rows.map(r => `
+<tr>
+<td style="white-space:nowrap;">${formatDate(r[idx("Date")])}</td>
+<td style="white-space:nowrap;">${r[idx("Quantity")] || '-'}</td>
+<td style="white-space:nowrap;">$${r[idx("Amount($)")]}</td>
+<td style="white-space:normal;">${r[idx("PRODUCT")]}</td>
+</tr>`).join("")}
+</table>`);
     });
 
     sim.on("tick", () => {
