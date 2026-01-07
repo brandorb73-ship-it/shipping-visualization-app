@@ -1,16 +1,7 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
-
 window.clusterMode = 'COUNTRY'; 
-
-// ================= SIMPLE MAP PLAYBACK =================
-window.routePlayback = {
-    enabled: false,
-    timer: null,
-    index: 0,
-    groups: []
-};
 
 // FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
 const formatDate = (dateValue) => {
@@ -67,7 +58,7 @@ window.populateFilters = function() {
     fill('orig-filter', 'Origin Country', 'Countries');
     fill('dest-filter', 'Destination Country', 'Countries');
     fill('orig-port-filter', 'Origin Port', 'Origin Ports');
-    fill('dest-port-filter', 'Destination Port', 'Destination Ports');
+fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 };
 
 window.recomputeViz = function() {
@@ -78,17 +69,17 @@ window.recomputeViz = function() {
     const h = window.rawData[0];
     const idx = (n) => h.findIndex(header => header.trim() === n);
 
-    const opF = document.getElementById('orig-port-filter')?.value || 'All';
-    const dpF = document.getElementById('dest-port-filter')?.value || 'All';
-
     const filteredRows = window.rawData.slice(1).filter(r => {
         const exporter = r[idx("Exporter")] || "";
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
         const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
         const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
-        const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
-        const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
-        return oMatch && dMatch && opMatch && dpMatch && sMatch;
+const opF = document.getElementById('orig-port-filter')?.value || 'All';
+const dpF = document.getElementById('dest-port-filter')?.value || 'All';
+
+const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
+const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
+return oMatch && dMatch && opMatch && dpMatch && sMatch;
     });
 
     const frame = document.getElementById('map-frame');
@@ -96,22 +87,13 @@ window.recomputeViz = function() {
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
-
-        frame.insertAdjacentHTML('afterbegin', `
-            <div class="viz-controls">
-                <button class="toggle-btn" onclick="window.startPlayback()">▶ Play Routes</button>
-                <button class="toggle-btn" onclick="window.stopPlayback()">⏹ Stop</button>
-            </div>
-        `);
-
         const groups = {};
         filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+           const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
         window.drawMap(Object.values(groups), idx);
-
     } else {
         frame.insertAdjacentHTML('afterbegin', `<div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}" onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
@@ -121,88 +103,113 @@ window.recomputeViz = function() {
     }
 };
 
-// ================== MAP DRAWING ==================
 window.drawMap = function(groups, idx) {
+    const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
-    window.routePlayback.groups = groups;
-    window.routePlayback.index = 0;
+    groups.forEach((group, gIdx) => {
+        window.buildColorLegend(routeLayers);
+        const f = group[0];
+        const lat1 = parseFloat(f[idx("Origin latitude")]);
+        const lon1 = parseFloat(f[idx("Origin longitude")]);
+        
+        const lat2 = parseFloat(f[idx("Destination latitude")]);
+        const lon2 = parseFloat(f[idx("Destination longitude")]);
 
-    if (!window.routePlayback.enabled) {
-        groups.forEach((g, i) => drawSingleRoute(g, i, idx));
-    }
-};
+        if (!isNaN(lat1) && !isNaN(lat2)) {
 
-// Draw single route (used for normal and playback)
-function drawSingleRoute(group, gIdx, idx) {
-    const f = group[0];
-    const lat1 = parseFloat(f[idx("Origin latitude")]);
-    const lon1 = parseFloat(f[idx("Origin longitude")]);
-    const lat2 = parseFloat(f[idx("Destination latitude")]);
-    const lon2 = parseFloat(f[idx("Destination longitude")]);
-    if (isNaN(lat1) || isNaN(lat2)) return;
+// Force Leaflet to respect small coordinate differences
+const jitter = gIdx * 0.015;
 
-    const jitter = gIdx * 0.015;
-    const origin = [lat1 + jitter, lon1 + jitter];
-    const dest = [lat2 + jitter, lon2 + jitter];
+const originLat = lat1 + jitter;
+const originLon = lon1 + jitter;
 
-    const ant = L.polyline.antPath([origin, dest], {
-        color: f[idx("COLOR")] || '#0ea5e9',
-        weight: 2.5,
-        delay: 1000,
-        dashArray: [10, 20]
-    }).addTo(window.LMap);
+const destLat = lat2 + jitter;
+const destLon = lon2 + jitter;
 
-    L.circleMarker(origin, { radius: 4, fillColor: '#0ea5e9', color: '#0f172a', fillOpacity: 1, weight: 1 }).addTo(window.LMap);
-    L.circleMarker(dest,   { radius: 4, fillColor: '#f43f5e', color: '#0f172a', fillOpacity: 1, weight: 1 }).addTo(window.LMap);
+            // STRAIGHT ANT PATH (No bend)
+        const ant = L.polyline.antPath(
+  [[originLat, originLon], [destLat, destLon]],
+  {
+    color: f[idx("COLOR")] && f[idx("COLOR")].trim() !== ""
+      ? f[idx("COLOR")]
+      : '#0ea5e9',
+    weight: 2.5,
+    delay: 1000,
+    dashArray: [10, 20]
+  }
+).addTo(window.LMap);
+            routeLayers.push({
+    color: f[idx("COLOR")] || '#0ea5e9',
+    layer: ant
+});
+// Origin port marker
+L.circleMarker([originLat, originLon], {
+    radius: 4,
+    color: '#0f172a',
+    fillColor: '#0ea5e9',
+    fillOpacity: 1,
+    weight: 1
+}).addTo(window.LMap);
 
-    ant.bindPopup(`
-        <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-            <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
-                <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-                <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-                <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
-            </div>
-        </div>
-    `);
-}
+L.circleMarker([destLat, destLon], {
+    radius: 4,
+    color: '#0f172a',
+    fillColor: '#f43f5e',
+    fillOpacity: 1,
+    weight: 1
+}).addTo(window.LMap);
+            const tableRows = group.map(s => `<tr>
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${formatDate(s[idx("Date")])}
+</td>
 
-// ================== PLAYBACK CONTROLS ==================
-window.startPlayback = function () {
-    window.stopPlayback();
-    window.routePlayback.enabled = true;
-    window.routePlayback.index = 0;
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${s[idx("Weight(Kg)")] || '-'}
+</td>
 
-    window.routePlayback.timer = setInterval(() => {
-        if (window.routePlayback.index >= window.routePlayback.groups.length) {
-            window.stopPlayback();
-            return;
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    $${s[idx("Amount($)")] || '-'}
+</td>
+
+<td style="white-space:normal; word-break:break-word;">
+    ${s[idx("PRODUCT")]}
+</td>
+
+<td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+    ${s[idx("Mode of Transportation")] || '-'}
+</td>
+            </tr>`).join('');
+
+            ant.bindPopup(`
+                <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
+                    <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
+                        <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+                    <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+                        <b>Ports:</b> ${f[idx("Origin Port") ] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+                    </div>
+                   <table class="popup-table"
+style="width:100%;
+border-collapse:collapse;
+table-layout:fixed;
+overflow:hidden;">
+                   <thead>
+<tr style="background:#f8fafc;">
+<th style="width:20%; white-space:nowrap;">Date</th>
+<th style="width:18%; white-space:nowrap;">Weight</th>
+<th style="width:18%; white-space:nowrap;">Amount</th>
+<th style="width:30%;">PRODUCT</th>
+<th style="width:14%; white-space:nowrap;">Mode</th>
+</tr>
+</thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>`, { maxWidth: 420 });
         }
-        drawSingleRoute(
-            window.routePlayback.groups[window.routePlayback.index],
-            window.routePlayback.index,
-            idxGlobal()
-        );
-        window.routePlayback.index++;
-    }, 700);
+    });
 };
 
-window.stopPlayback = function () {
-    window.routePlayback.enabled = false;
-    if (window.routePlayback.timer) {
-        clearInterval(window.routePlayback.timer);
-        window.routePlayback.timer = null;
-    }
-};
-
-// Header index helper
-function idxGlobal() {
-    const h = window.rawData[0];
-    return (n) => h.findIndex(x => x.trim() === n);
-}
-
-// ================== CLUSTER VIEW ==================
 window.drawCluster = function(data, idx) {
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth, height = frame.clientHeight;
@@ -220,21 +227,28 @@ window.drawCluster = function(data, idx) {
         if(!nodeSet.has(exp)) { nodes.push({id: exp, type: 'exp'}); nodeSet.add(exp); }
         if(!nodeSet.has(imp)) { nodes.push({id: imp, type: 'imp'}); nodeSet.add(imp); }
         const tradeKey = exp + "→" + imp;
-        if (!window._tradeAgg) window._tradeAgg = {};
-        if (!window._tradeAgg[tradeKey]) {
-            window._tradeAgg[tradeKey] = { source: exp, target: imp, type: 'trade', rows: [] };
-        }
-        window._tradeAgg[tradeKey].rows.push(r);
-        if (window.clusterMode !== 'COUNTRY') {
-            links.push({source: exp, target: imp, type: 'trade', data: r});
-        }      
+
+if (!window._tradeAgg) window._tradeAgg = {};
+
+if (!window._tradeAgg[tradeKey]) {
+    window._tradeAgg[tradeKey] = {
+        source: exp,
+        target: imp,
+        type: 'trade',
+        rows: []
+    };
+}
+
+window._tradeAgg[tradeKey].rows.push(r);
+if (window.clusterMode !== 'COUNTRY') {
+    links.push({source: exp, target: imp, type: 'trade', data: r});
+}      
         links.push({source: gp, target: exp, type: 'link'}, {source: dp, target: imp, type: 'link'});
     });
-    if (window.clusterMode === 'COUNTRY' && window._tradeAgg) {
-        Object.values(window._tradeAgg).forEach(l => links.push(l));
-        window._tradeAgg = null;
-    }
-
+if (window.clusterMode === 'COUNTRY' && window._tradeAgg) {
+    Object.values(window._tradeAgg).forEach(l => links.push(l));
+    window._tradeAgg = null;
+}
     const sim = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-300))
@@ -247,15 +261,18 @@ window.drawCluster = function(data, idx) {
         .call(d3.drag().on("start", (e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y})
         .on("drag",(e,d)=>{d.fx=e.x;d.fy=e.y}).on("end",(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
 
+    // Circles
     node.append("circle")
         .attr("r", d => d.type === 'parent' ? 22 : 14)
         .attr("fill", d => d.type === 'parent' ? '#1e293b' : (d.type === 'exp' ? '#0ea5e9' : '#f43f5e'))
         .attr("stroke", "#fff").attr("stroke-width", 2);
 
+    // FIXED: Centered Icons
     node.append("foreignObject")
         .attr("width", 30)
         .attr("height", 30)
-        .attr("x", -15)
+        // Center calculation: (width / -2) for horizontal and (height / -2) for vertical centering
+        .attr("x", -15) 
         .attr("y", -15)
         .style("pointer-events", "none")
         .html(d => {
@@ -269,12 +286,13 @@ window.drawCluster = function(data, idx) {
 
     node.append("text").text(d => d.id).attr("y", 35).attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "bold");
 
+    // FIXED: Added Quantity to Popup
     link.filter(d => d.type === 'trade').on("click", (e, d) => {
-        const rows = d.rows || [d.data];
+    const rows = d.rows || [d.data];
         d3.selectAll(".cluster-pop").remove();
         d3.select("#map-frame").append("div").attr("class", "cluster-pop")
             .style("left", e.offsetX + "px").style("top", e.offsetY + "px")
-            .html(`
+.html(`
 <span class="pop-close" onclick="this.parentElement.remove()">×</span>
 <strong>${rows[0][idx("Exporter")]} → ${rows[0][idx("Importer")]}</strong>
 <table class="popup-table" style="margin-top:6px;">
@@ -295,8 +313,6 @@ ${rows.map(r => `
         node.attr("transform", d=>`translate(${d.x},${d.y})`);
     });
 };
-
-// ================== COLOR LEGEND ==================
 window.buildColorLegend = function(routes) {
     const container = document.getElementById("map-frame");
     document.getElementById("color-legend")?.remove();
