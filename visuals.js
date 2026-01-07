@@ -227,8 +227,15 @@ window.startPlayback = function(idx) {
                 window._playbackDrawnKeys.add(key);
             }
         });
-
         if (Object.keys(newGroups).length) {
+    const g = Object.values(newGroups);
+    window.drawMap(g, idx);
+    window.playbackAutoFocus(g, idx);
+}
+
+window.playback.currentIndex++;
+    }, window.playback.speed);
+};
 
 // ================= CLUSTER =================
 window.drawCluster = function(data, idx) {
