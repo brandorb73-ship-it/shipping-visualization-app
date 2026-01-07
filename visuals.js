@@ -168,8 +168,7 @@ function renderRoutes(rows, idx, autoPopup = false) {
 </thead><tbody>${tableRows}</tbody></table></div>`, {maxWidth:420});
                        </table>
             </div>
-        `;
-
+        
         line.bindPopup(popupHTML);
         window.routeLayers.push(line);
         popupQueue.push(line);
