@@ -149,21 +149,24 @@ function renderRoutes(rows, idx, autoPopup = false) {
         /* === POPUP CONTENT === */
         const table = g.map(r => `
             <tr>
-                <td>${formatDate(r[idx('Date')])}</td>
-                <td>${r[idx('PRODUCT')]}</td>
-                <td>${r[idx('Quantity')] || '-'}</td>
-                <td>$${r[idx('Amount($)')] || '-'}</td>
-            </tr>
-        `).join('');
+<td>${formatDate(s[idx("Date")])}</td>
+<td>${s[idx("Weight(Kg)")] || '-'}</td>
+<td>$${s[idx("Amount($)")] || '-'}</td>
+<td>${s[idx("PRODUCT")]}</td>
+<td>${s[idx("Mode of Transportation")] || '-'}</td>
+</tr>`).join('');
 
         const popupHTML = `
-            <div style="width:360px">
-                <b>${f[idx('Exporter')]} → ${f[idx('Importer')]}</b><br>
-                ${f[idx('Origin Port')]} → ${f[idx('Destination Port')]}
-                <table class="popup-table" style="margin-top:6px">
-                    <tr><th>Date</th><th>Product</th><th>Qty</th><th>Value</th></tr>
-                    ${table}
-                </table>
+<div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
+<div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
+<b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
+<b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
+<b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}</div>
+<table class="popup-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
+<thead><tr style="background:#f8fafc;">
+<th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th></tr>
+</thead><tbody>${tableRows}</tbody></table></div>`, {maxWidth:420});
+                       </table>
             </div>
         `;
 
