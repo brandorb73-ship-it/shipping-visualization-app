@@ -1,19 +1,22 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+
 window._playbackDrawnKeys = new Set();
 window._allRouteGroups = null;
+
 // ================= PLAYBACK STATE =================
 window.playback = {
     enabled: false,
     unit: 'MONTH',
-    speed: 800, // ms per frame
+    speed: 800,
     timer: null,
     frames: [],
     currentIndex: 0
 };
+
 window.clusterMode = 'COUNTRY';
-window.currentTab = 'MAP'; // default tab
+window.currentTab = 'MAP';
 
 // ================= DATE HELPERS =================
 window.getMonthKey = function(dateStr) {
@@ -26,15 +29,11 @@ window.getMonthKey = function(dateStr) {
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     const strVal = String(dateValue).trim();
-    const regex = /(\d{4})-(\d{2})-(\d{2})/;
-    const match = strVal.match(regex);
+    const match = strVal.match(/(\d{4})-(\d{2})-(\d{2})/);
     if (match) return match[0];
-    let d = new Date(dateValue);
-    if (!isNaN(d.getTime())) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2,'0');
-        const day = String(d.getDate()).padStart(2,'0');
-        return `${y}-${m}-${day}`;
+    const d = new Date(dateValue);
+    if (!isNaN(d)) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }
     return strVal;
 };
@@ -42,15 +41,16 @@ const formatDate = (dateValue) => {
 // ================= FILTERS =================
 window.populateFilters = function() {
     if (!window.rawData || window.rawData.length < 2) return;
-    const h = window.rawData[0].map(header => header.trim());
+    const h = window.rawData[0].map(v => v.trim());
     const data = window.rawData.slice(1);
 
     const fill = (id, col, lbl) => {
-        const i = h.findIndex(header => header === col);
+        const i = h.indexOf(col);
         if (i === -1) return;
         const el = document.getElementById(id);
-        const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
-        el.innerHTML = `<option value="All">All ${lbl}</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
+        const vals = [...new Set(data.map(r => r[i]).filter(Boolean))].sort();
+        el.innerHTML = `<option value="All">All ${lbl}</option>` +
+            vals.map(v => `<option value="${v}">${v}</option>`).join('');
     };
 
     fill('orig-filter', 'Origin Country', 'Countries');
@@ -63,12 +63,8 @@ window.populateFilters = function() {
 window.recomputeViz = function() {
     if (!window.rawData) return;
 
-    const h = window.rawData[0].map(header => header.trim());
-    const idx = (n) => {
-        const i = h.findIndex(header => header === n);
-        if (i === -1) console.warn(`Column "${n}" not found`);
-        return i;
-    };
+    const h = window.rawData[0].map(v => v.trim());
+    const idx = n => h.indexOf(n);
 
     const search = document.getElementById('ent-search')?.value.toLowerCase() || '';
     const origF = document.getElementById('orig-filter')?.value || 'All';
@@ -77,113 +73,95 @@ window.recomputeViz = function() {
     const dpF = document.getElementById('dest-port-filter')?.value || 'All';
 
     const filteredRows = window.rawData.slice(1).filter(r => {
-        const exporter = r[idx("Exporter")] || "";
-        const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
-        const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
-        const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
-        const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
-        const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
-        return oMatch && dMatch && opMatch && dpMatch && sMatch;
+        return (
+            (origF === 'All' || r[idx("Origin Country")] === origF) &&
+            (destF === 'All' || r[idx("Destination Country")] === destF) &&
+            (opF === 'All' || r[idx("Origin Port")] === opF) &&
+            (dpF === 'All' || r[idx("Destination Port")] === dpF) &&
+            ((r[idx("Exporter")] + r[idx("Importer")] + r[idx("PRODUCT")]).toLowerCase().includes(search))
+        );
     });
 
     const frame = document.getElementById('map-frame');
-    frame.innerHTML = "";
-
-    // ===== TAB SWITCH CONTROLS =====
-    frame.insertAdjacentHTML('afterbegin', `
+    frame.innerHTML = `
         <div class="viz-controls" style="margin-bottom:6px;">
             <button class="toggle-btn ${window.currentTab==='MAP'?'active':''}" onclick="window.currentTab='MAP'; recomputeViz();">Map View</button>
             <button class="toggle-btn ${window.currentTab==='CLUSTER'?'active':''}" onclick="window.currentTab='CLUSTER'; recomputeViz();">Cluster View</button>
         </div>
-    `);
+    `;
 
     if (window.currentTab === 'MAP') {
-        // BUILD PLAYBACK
         window.playback.frames = [];
         window.playback.currentIndex = 0;
 
         const monthGroups = {};
         filteredRows.forEach(r => {
-            const m = getMonthKey(formatDate(r[idx("Date")] ));
+            const m = getMonthKey(formatDate(r[idx("Date")]));
             if (!m) return;
-            if (!monthGroups[m]) monthGroups[m] = [];
-            monthGroups[m].push(r);
+            (monthGroups[m] ||= []).push(r);
         });
-        window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
 
-        // DRAW MAP GROUPS
+        window.playback.frames = Object.keys(monthGroups).sort().map(k => monthGroups[k]);
+
         const groups = {};
         filteredRows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(r);
+            (groups[key] ||= []).push(r);
         });
 
-        // ===== MAP PLAYBACK BUTTON =====
         frame.insertAdjacentHTML('beforeend', `
             <div class="viz-controls">
                 <button class="toggle-btn ${window.playback.enabled ? 'active' : ''}"
-                    onclick="window.playback.enabled = !window.playback.enabled; recomputeViz();">
+                    onclick="window.playback.enabled=!window.playback.enabled; recomputeViz();">
                     ▶ Playback (Monthly)
                 </button>
-                <span style="font-size:11px;color:#64748b;align-self:center;">
-                    Speed: Medium · Unit: Month · Accumulate
-                </span>
             </div>
         `);
 
         window._allRouteGroups = Object.values(groups);
-window._playbackDrawnKeys.clear();
+        window._playbackDrawnKeys.clear();
 
-// draw everything once if playback is OFF
-if (!window.playback.enabled) {
-    window.drawMap(window._allRouteGroups, idx);
-}
+        if (!window.playback.enabled) {
+            window.drawMap(window._allRouteGroups, idx);
+        } else {
+            window.startPlayback(idx);
+        }
 
-// start playback if enabled
-if (window.playback.enabled) {
-    window.startPlayback(idx);
-}
     } else if (window.currentTab === 'CLUSTER') {
-        // CLUSTER VIEW
         window.drawCluster(filteredRows, idx);
     }
 };
 
 // ================= DRAW MAP =================
 window.drawMap = function(groups, idx) {
+    if (!window.LMap) {
+        window.LMap = L.map('map-frame').setView([20,0],2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
+            .addTo(window.LMap);
+    }
+
     const routeLayers = [];
-    window.LMap = L.map('map-frame').setView([20,0],2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
-        window.buildColorLegend(routeLayers);
         const f = group[0];
-        const lat1 = parseFloat(f[idx("Origin latitude")]);
-        const lon1 = parseFloat(f[idx("Origin longitude")]);
-        const lat2 = parseFloat(f[idx("Destination latitude")]);
-        const lon2 = parseFloat(f[idx("Destination longitude")]);
+        const lat1 = +f[idx("Origin latitude")];
+        const lon1 = +f[idx("Origin longitude")];
+        const lat2 = +f[idx("Destination latitude")];
+        const lon2 = +f[idx("Destination longitude")];
+        if (isNaN(lat1) || isNaN(lat2)) return;
 
-        if (!isNaN(lat1) && !isNaN(lat2)) {
-            const jitter = gIdx * 0.015;
-            const originLat = lat1 + jitter;
-            const originLon = lon1 + jitter;
-            const destLat = lat2 + jitter;
-            const destLon = lon2 + jitter;
+        const j = gIdx * 0.015;
+        const ant = L.polyline.antPath(
+            [[lat1+j, lon1+j], [lat2+j, lon2+j]],
+            { color: f[idx("COLOR")] || '#0ea5e9', weight: 2.5, delay: 1000, dashArray: [10,20] }
+        ).addTo(window.LMap);
 
-            const ant = L.polyline.antPath([[originLat, originLon],[destLat, destLon]],{
-                color: f[idx("COLOR")]?.trim() || '#0ea5e9',
-                weight: 2.5,
-                delay: 1000,
-                dashArray: [10,20]
-            }).addTo(window.LMap);
+        routeLayers.push({ color: f[idx("COLOR")] || '#0ea5e9', layer: ant });
 
-            routeLayers.push({color:f[idx("COLOR")] || '#0ea5e9', layer:ant});
+        L.circleMarker([lat1+j, lon1+j], { radius:4, color:'#0f172a', fillColor:'#0ea5e9', fillOpacity:1 }).addTo(window.LMap);
+        L.circleMarker([lat2+j, lon2+j], { radius:4, color:'#0f172a', fillColor:'#f43f5e', fillOpacity:1 }).addTo(window.LMap);
 
-            L.circleMarker([originLat, originLon], {radius:4, color:'#0f172a', fillColor:'#0ea5e9', fillOpacity:1, weight:1}).addTo(window.LMap);
-            L.circleMarker([destLat, destLon], {radius:4, color:'#0f172a', fillColor:'#f43f5e', fillOpacity:1, weight:1}).addTo(window.LMap);
-
-            const tableRows = group.map(s => `
+        const tableRows = group.map(s => `
 <tr>
 <td>${formatDate(s[idx("Date")])}</td>
 <td>${s[idx("Weight(Kg)")] || '-'}</td>
@@ -192,18 +170,36 @@ window.drawMap = function(groups, idx) {
 <td>${s[idx("Mode of Transportation")] || '-'}</td>
 </tr>`).join('');
 
-            ant.bindPopup(`
+        ant.bindPopup(`
 <div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
 <div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
 <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
 <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-<b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}</div>
+<b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}
+</div>
 <table class="popup-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
 <thead><tr style="background:#f8fafc;">
-<th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th></tr>
-</thead><tbody>${tableRows}</tbody></table></div>`, {maxWidth:420});
-        }
+<th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th>
+</tr></thead><tbody>${tableRows}</tbody>
+</table></div>`, { maxWidth: 420 });
     });
+
+    window.buildColorLegend(routeLayers);
+};
+
+// ================= PLAYBACK AUTO FOCUS =================
+window.playbackAutoFocus = function(groups, idx) {
+    const g = groups[0][0];
+    const b = [
+        [+g[idx("Origin latitude")], +g[idx("Origin longitude")]],
+        [+g[idx("Destination latitude")], +g[idx("Destination longitude")]]
+    ];
+    window.LMap.fitBounds(b, { padding:[60,60], maxZoom:5 });
+
+    setTimeout(() => {
+        const last = Object.values(window.LMap._layers).reverse().find(l => l.openPopup);
+        if (last) last.openPopup();
+    }, 400);
 };
 
 // ================= PLAYBACK =================
@@ -211,12 +207,9 @@ window.startPlayback = function(idx) {
     if (!window.playback.frames.length) return;
     if (window.playback.timer) clearInterval(window.playback.timer);
 
-    // draw empty base map
-    document.getElementById('map-frame').innerHTML = '';
-    window.drawMap([], idx);
-
     window.playback.currentIndex = 0;
     window._playbackDrawnKeys.clear();
+    window.LMap && window.LMap.eachLayer(l => l instanceof L.Polyline && window.LMap.removeLayer(l));
 
     window.playback.timer = setInterval(() => {
         if (window.playback.currentIndex >= window.playback.frames.length) {
@@ -230,47 +223,12 @@ window.startPlayback = function(idx) {
         rows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
             if (!window._playbackDrawnKeys.has(key)) {
-                if (!newGroups[key]) newGroups[key] = [];
-                newGroups[key].push(r);
+                (newGroups[key] ||= []).push(r);
                 window._playbackDrawnKeys.add(key);
             }
         });
 
         if (Object.keys(newGroups).length) {
-            window.drawMap(Object.values(newGroups), idx);
-            window.playbackAutoFocus(Object.values(newGroups), idx);
-        }
-window.playbackAutoFocus = function(groups, idx) {
-    if (!groups.length) return;
-
-    const g = groups[0];
-    const f = g[0];
-
-    const lat1 = +f[idx("Origin latitude")];
-    const lon1 = +f[idx("Origin longitude")];
-    const lat2 = +f[idx("Destination latitude")];
-    const lon2 = +f[idx("Destination longitude")];
-
-    if (!isNaN(lat1) && !isNaN(lat2)) {
-        window.LMap.fitBounds([[lat1, lon1], [lat2, lon2]], {
-            padding: [60, 60],
-            maxZoom: 5
-            console.log(
-  `Narration: ${f[idx("Exporter")]} shipped ${f[idx("PRODUCT")]} from ${f[idx("Origin Country")]} to ${f[idx("Destination Country")]}`
-);
-        });
-    }
-
-    // open the most recent popup
-    setTimeout(() => {
-        const layers = Object.values(window.LMap._layers);
-        const lastRoute = layers.reverse().find(l => l.openPopup);
-        if (lastRoute) lastRoute.openPopup();
-    }, 400);
-};
-        window.playback.currentIndex++;
-    }, window.playback.speed);
-};
 
 // ================= CLUSTER =================
 window.drawCluster = function(data, idx) {
