@@ -1,56 +1,44 @@
 /**
- * BRANDORB VISUALS - STABLE VERSION
+ * BRANDORB VISUALS – STABLE + SIMPLIFIED PLAYBACK
  */
 
-// ================= PLAYBACK STATE =================
-window.playback = {
-    enabled: false,
-    unit: 'MONTH',
-    speed: 800, // ms per frame
-    timer: null,
-    frames: [],
-    currentIndex: 0
-};
+/* ================= GLOBAL STATE ================= */
 window.clusterMode = 'COUNTRY';
-window.currentTab = 'MAP'; // default tab
+window.LMap = null;
+window.routeLayers = [];
+window.playbackTimer = null;
 
-// ================= DATE HELPERS =================
-window.getMonthKey = function(dateStr) {
-    if (!dateStr) return null;
-    const d = new Date(dateStr);
+/* ================= DATE HELPERS ================= */
+function getMonthKey(v) {
+    if (!v) return null;
+    const d = new Date(v);
     if (isNaN(d)) return null;
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-};
+}
 
-const formatDate = (dateValue) => {
-    if (!dateValue) return 'N/A';
-    const strVal = String(dateValue).trim();
-    const regex = /(\d{4})-(\d{2})-(\d{2})/;
-    const match = strVal.match(regex);
-    if (match) return match[0];
-    let d = new Date(dateValue);
-    if (!isNaN(d.getTime())) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2,'0');
-        const day = String(d.getDate()).padStart(2,'0');
-        return `${y}-${m}-${day}`;
-    }
-    return strVal;
-};
+function formatDate(v) {
+    if (!v) return 'N/A';
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    return d.toISOString().slice(0,10);
+}
 
-// ================= FILTERS =================
-window.populateFilters = function() {
-    if (!window.rawData || window.rawData.length < 2) return;
-    const h = window.rawData[0].map(header => header.trim());
-    const data = window.rawData.slice(1);
+/* ================= FILTER DROPDOWNS ================= */
+window.populateFilters = function () {
+    if (!window.rawData) return;
 
-    const fill = (id, col, lbl) => {
-        const i = h.findIndex(header => header === col);
+    const h = window.rawData[0];
+    const rows = window.rawData.slice(1);
+
+    function fill(id, col, label) {
+        const i = h.indexOf(col);
         if (i === -1) return;
         const el = document.getElementById(id);
-        const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
-        el.innerHTML = `<option value="All">All ${lbl}</option>` + vals.map(v => `<option value="${v}">${v}</option>`).join('');
-    };
+        const vals = [...new Set(rows.map(r => r[i]).filter(Boolean))].sort();
+        el.innerHTML =
+            `<option value="All">All ${label}</option>` +
+            vals.map(v => `<option>${v}</option>`).join('');
+    }
 
     fill('orig-filter', 'Origin Country', 'Countries');
     fill('dest-filter', 'Destination Country', 'Countries');
@@ -58,165 +46,120 @@ window.populateFilters = function() {
     fill('dest-port-filter', 'Destination Port', 'Destination Ports');
 };
 
-// ================= MAIN RECOMPUTE =================
-window.recomputeViz = function() {
+/* ================= MAIN RECOMPUTE ================= */
+window.recomputeViz = function () {
     if (!window.rawData) return;
 
-    const h = window.rawData[0].map(header => header.trim());
-    const idx = (n) => {
-        const i = h.findIndex(header => header === n);
-        if (i === -1) console.warn(`Column "${n}" not found`);
-        return i;
-    };
+    clearInterval(window.playbackTimer);
+
+    const h = window.rawData[0];
+    const idx = c => h.indexOf(c);
 
     const search = document.getElementById('ent-search')?.value.toLowerCase() || '';
-    const origF = document.getElementById('orig-filter')?.value || 'All';
-    const destF = document.getElementById('dest-filter')?.value || 'All';
-    const opF = document.getElementById('orig-port-filter')?.value || 'All';
-    const dpF = document.getElementById('dest-port-filter')?.value || 'All';
+    const oC = document.getElementById('orig-filter')?.value || 'All';
+    const dC = document.getElementById('dest-filter')?.value || 'All';
+    const oP = document.getElementById('orig-port-filter')?.value || 'All';
+    const dP = document.getElementById('dest-port-filter')?.value || 'All';
 
-    const filteredRows = window.rawData.slice(1).filter(r => {
-        const exporter = r[idx("Exporter")] || "";
-        const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
-        const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
-        const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||"")).toLowerCase().includes(search);
-        const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
-        const dpMatch = dpF === 'All' || r[idx("Destination Port")] === dpF;
-        return oMatch && dMatch && opMatch && dpMatch && sMatch;
+    const rows = window.rawData.slice(1).filter(r => {
+        if (oC !== 'All' && r[idx('Origin Country')] !== oC) return false;
+        if (dC !== 'All' && r[idx('Destination Country')] !== dC) return false;
+        if (oP !== 'All' && r[idx('Origin Port')] !== oP) return false;
+        if (dP !== 'All' && r[idx('Destination Port')] !== dP) return false;
+        const blob = (r[idx('Exporter')] + r[idx('Importer')] + r[idx('PRODUCT')]).toLowerCase();
+        return blob.includes(search);
     });
 
     const frame = document.getElementById('map-frame');
-    frame.innerHTML = "";
+    frame.innerHTML = '';
 
-    // ===== TAB SWITCH CONTROLS =====
-    frame.insertAdjacentHTML('afterbegin', `
-        <div class="viz-controls" style="margin-bottom:6px;">
-            <button class="toggle-btn ${window.currentTab==='MAP'?'active':''}" onclick="window.currentTab='MAP'; recomputeViz();">Map View</button>
-            <button class="toggle-btn ${window.currentTab==='CLUSTER'?'active':''}" onclick="window.currentTab='CLUSTER'; recomputeViz();">Cluster View</button>
-        </div>
-    `);
-
-    if (window.currentTab === 'MAP') {
-        // BUILD PLAYBACK
-        window.playback.frames = [];
-        window.playback.currentIndex = 0;
-
-        const monthGroups = {};
-        filteredRows.forEach(r => {
-            const m = getMonthKey(formatDate(r[idx("Date")] ));
-            if (!m) return;
-            if (!monthGroups[m]) monthGroups[m] = [];
-            monthGroups[m].push(r);
-        });
-        window.playback.frames = Object.keys(monthGroups).sort().map(m => monthGroups[m]);
-
-        // DRAW MAP GROUPS
-        const groups = {};
-        filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(r);
-        });
-
-        // ===== MAP PLAYBACK BUTTON =====
-        frame.insertAdjacentHTML('beforeend', `
-            <div class="viz-controls">
-                <button class="toggle-btn ${window.playback.enabled ? 'active' : ''}"
-                    onclick="window.playback.enabled = !window.playback.enabled; recomputeViz();">
-                    ▶ Playback (Monthly)
-                </button>
-                <span style="font-size:11px;color:#64748b;align-self:center;">
-                    Speed: Medium · Unit: Month · Accumulate
-                </span>
-            </div>
-        `);
-
-        window.drawMap(Object.values(groups), idx);
-        if (window.playback.enabled) window.startPlayback(idx);
-
-    } else if (window.currentTab === 'CLUSTER') {
-        // CLUSTER VIEW
-        window.drawCluster(filteredRows, idx);
+    if (window.currentTab === 'CLUSTER') {
+        drawCluster(rows, idx);
+        return;
     }
+
+    drawRouteMap(rows, idx);
 };
 
-// ================= DRAW MAP =================
-window.drawMap = function(groups, idx) {
-    const routeLayers = [];
-    window.LMap = L.map('map-frame').setView([20,0],2);
+/* ================= ROUTE MAP ================= */
+function drawRouteMap(rows, idx) {
+
+    document.getElementById('map-frame').innerHTML = `
+        <div class="viz-controls">
+            <button class="toggle-btn" onclick="startPlayback()">▶ Playback (Monthly)</button>
+            <button class="toggle-btn" onclick="stopPlayback()">⏹ Stop</button>
+        </div>
+        <div id="leaflet-map" style="height:100%"></div>
+    `;
+
+    window.LMap = L.map('leaflet-map').setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(window.LMap);
 
-    groups.forEach((group, gIdx) => {
-        window.buildColorLegend(routeLayers);
-        const f = group[0];
-        const lat1 = parseFloat(f[idx("Origin latitude")]);
-        const lon1 = parseFloat(f[idx("Origin longitude")]);
-        const lat2 = parseFloat(f[idx("Destination latitude")]);
-        const lon2 = parseFloat(f[idx("Destination longitude")]);
+    renderRoutes(rows, idx);
+}
 
-        if (!isNaN(lat1) && !isNaN(lat2)) {
-            const jitter = gIdx * 0.015;
-            const originLat = lat1 + jitter;
-            const originLon = lon1 + jitter;
-            const destLat = lat2 + jitter;
-            const destLon = lon2 + jitter;
+/* ================= ROUTE DRAW ================= */
+function renderRoutes(rows, idx) {
+    window.routeLayers.forEach(l => window.LMap.removeLayer(l));
+    window.routeLayers = [];
 
-            const ant = L.polyline.antPath([[originLat, originLon],[destLat, destLon]],{
-                color: f[idx("COLOR")]?.trim() || '#0ea5e9',
-                weight: 2.5,
-                delay: 1000,
-                dashArray: [10,20]
-            }).addTo(window.LMap);
-
-            routeLayers.push({color:f[idx("COLOR")] || '#0ea5e9', layer:ant});
-
-            L.circleMarker([originLat, originLon], {radius:4, color:'#0f172a', fillColor:'#0ea5e9', fillOpacity:1, weight:1}).addTo(window.LMap);
-            L.circleMarker([destLat, destLon], {radius:4, color:'#0f172a', fillColor:'#f43f5e', fillOpacity:1, weight:1}).addTo(window.LMap);
-
-            const tableRows = group.map(s => `
-<tr>
-<td>${formatDate(s[idx("Date")])}</td>
-<td>${s[idx("Weight(Kg)")] || '-'}</td>
-<td>$${s[idx("Amount($)")] || '-'}</td>
-<td>${s[idx("PRODUCT")]}</td>
-<td>${s[idx("Mode of Transportation")] || '-'}</td>
-</tr>`).join('');
-
-            ant.bindPopup(`
-<div style="width:380px; font-family:sans-serif; max-height:280px; overflow-y:auto;">
-<div style="margin-bottom:8px; border-top:4px solid ${f[idx("COLOR")] || '#0ea5e9'}; padding-top:6px;">
-<b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
-<b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-<b>Ports:</b> ${f[idx("Origin Port")]} → ${f[idx("Destination Port")]}</div>
-<table class="popup-table" style="width:100%;border-collapse:collapse;table-layout:fixed;">
-<thead><tr style="background:#f8fafc;">
-<th>Date</th><th>Weight</th><th>Amount</th><th>PRODUCT</th><th>Mode</th></tr>
-</thead><tbody>${tableRows}</tbody></table></div>`, {maxWidth:420});
-        }
+    const groups = {};
+    rows.forEach(r => {
+        const k = `${r[idx('Exporter')]}|${r[idx('Importer')]}|${r[idx('Origin Port')]}|${r[idx('Destination Port')]}`;
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(r);
     });
-};
 
-// ================= PLAYBACK =================
-window.startPlayback = function(idx) {
-    if (!window.playback.frames.length) return;
-    if (window.playback.timer) clearInterval(window.playback.timer);
+    Object.values(groups).forEach(g => {
+        const f = g[0];
+        const oLat = +f[idx('Origin latitude')];
+        const oLon = +f[idx('Origin longitude')];
+        const dLat = +f[idx('Destination latitude')];
+        const dLon = +f[idx('Destination longitude')];
+        if (isNaN(oLat) || isNaN(dLat)) return;
 
-    window.playback.timer = setInterval(() => {
-        if (window.playback.currentIndex >= window.playback.frames.length) {
-            clearInterval(window.playback.timer);
-            return;
-        }
-        const rows = window.playback.frames[window.playback.currentIndex];
-        const groups = {};
-        rows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(r);
-        });
-        window.drawMap(Object.values(groups), idx);
-        window.playback.currentIndex++;
-    }, window.playback.speed);
-};
+        const line = L.polyline.antPath(
+            [[oLat, oLon], [dLat, dLon]],
+            {
+                color: f[idx('COLOR')] || '#0ea5e9',
+                weight: 2.5,
+                delay: 800
+            }
+        ).addTo(window.LMap);
+
+        window.routeLayers.push(line);
+    });
+}
+
+/* ================= PLAYBACK ================= */
+function startPlayback() {
+    stopPlayback();
+
+    const h = window.rawData[0];
+    const idx = c => h.indexOf(c);
+
+    const byMonth = {};
+    window.rawData.slice(1).forEach(r => {
+        const m = getMonthKey(r[idx('Date')]);
+        if (!m) return;
+        if (!byMonth[m]) byMonth[m] = [];
+        byMonth[m].push(r);
+    });
+
+    const months = Object.keys(byMonth).sort();
+    let i = 0;
+
+    window.playbackTimer = setInterval(() => {
+        if (i >= months.length) return stopPlayback();
+        renderRoutes(byMonth[months[i]], idx);
+        i++;
+    }, 1200);
+}
+
+function stopPlayback() {
+    clearInterval(window.playbackTimer);
+    window.playbackTimer = null;
+}
 
 // ================= CLUSTER =================
 window.drawCluster = function(data, idx) {
