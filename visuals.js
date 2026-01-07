@@ -99,7 +99,7 @@ function drawRouteMap(rows, idx) {
 }
 
 /* ================= ROUTE DRAW ================= */
-function renderRoutes(rows, idx) {
+function renderRoutes(rows, idx, autoPopup = false) {
     window.routeLayers.forEach(l => window.LMap.removeLayer(l));
     window.routeLayers = [];
 
@@ -110,25 +110,80 @@ function renderRoutes(rows, idx) {
         groups[k].push(r);
     });
 
-    Object.values(groups).forEach(g => {
+    let popupQueue = [];
+
+    Object.values(groups).forEach((g, i) => {
         const f = g[0];
+
         const oLat = +f[idx('Origin latitude')];
         const oLon = +f[idx('Origin longitude')];
         const dLat = +f[idx('Destination latitude')];
         const dLon = +f[idx('Destination longitude')];
         if (isNaN(oLat) || isNaN(dLat)) return;
 
+        const color = f[idx('COLOR')] || '#0ea5e9';
+
+        /* === ROUTE LINE === */
         const line = L.polyline.antPath(
             [[oLat, oLon], [dLat, dLon]],
-            {
-                color: f[idx('COLOR')] || '#0ea5e9',
-                weight: 2.5,
-                delay: 800
-            }
+            { color, weight: 2.5, delay: 800 }
         ).addTo(window.LMap);
 
+        /* === START / END DOTS === */
+        L.circleMarker([oLat, oLon], {
+            radius: 4,
+            color: '#0f172a',
+            fillColor: '#0ea5e9',
+            fillOpacity: 1,
+            weight: 1
+        }).addTo(window.LMap);
+
+        L.circleMarker([dLat, dLon], {
+            radius: 4,
+            color: '#0f172a',
+            fillColor: '#f43f5e',
+            fillOpacity: 1,
+            weight: 1
+        }).addTo(window.LMap);
+
+        /* === POPUP CONTENT === */
+        const table = g.map(r => `
+            <tr>
+                <td>${formatDate(r[idx('Date')])}</td>
+                <td>${r[idx('PRODUCT')]}</td>
+                <td>${r[idx('Quantity')] || '-'}</td>
+                <td>$${r[idx('Amount($)')] || '-'}</td>
+            </tr>
+        `).join('');
+
+        const popupHTML = `
+            <div style="width:360px">
+                <b>${f[idx('Exporter')]} → ${f[idx('Importer')]}</b><br>
+                ${f[idx('Origin Port')]} → ${f[idx('Destination Port')]}
+                <table class="popup-table" style="margin-top:6px">
+                    <tr><th>Date</th><th>Product</th><th>Qty</th><th>Value</th></tr>
+                    ${table}
+                </table>
+            </div>
+        `;
+
+        line.bindPopup(popupHTML);
         window.routeLayers.push(line);
+        popupQueue.push(line);
     });
+
+    /* === AUTO POPUP SEQUENCE (FOR PLAYBACK) === */
+    if (autoPopup && popupQueue.length) {
+        let i = 0;
+        const openNext = () => {
+            if (i > 0) popupQueue[i - 1].closePopup();
+            if (i >= popupQueue.length) return;
+            popupQueue[i].openPopup();
+            i++;
+            setTimeout(openNext, 1200);
+        };
+        openNext();
+    }
 }
 
 /* ================= PLAYBACK ================= */
@@ -147,18 +202,15 @@ function startPlayback() {
     });
 
     const months = Object.keys(byMonth).sort();
+    let accumulated = [];
     let i = 0;
 
     window.playbackTimer = setInterval(() => {
         if (i >= months.length) return stopPlayback();
-        renderRoutes(byMonth[months[i]], idx);
+        accumulated = accumulated.concat(byMonth[months[i]]);
+        renderRoutes(accumulated, idx, true);
         i++;
-    }, 1200);
-}
-
-function stopPlayback() {
-    clearInterval(window.playbackTimer);
-    window.playbackTimer = null;
+    }, 1800);
 }
 
 // ================= CLUSTER =================
