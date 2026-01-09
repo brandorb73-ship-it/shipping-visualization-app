@@ -327,7 +327,13 @@ function doLogin() {
             <td>${r.client}</td>
             <td>${r.type}</td>
             <td style="display: flex; gap: 8px;">
-                <button class="btn-p" onclick="initViz('${r.url}', '${r.name}')">View</button>
+                <a 
+  class="btn-p" 
+  href="?report=${encodeURIComponent(r.id)}"
+  onclick="initViz('${r.url}', '${r.name}'); return false;"
+>
+  View
+</a>
                 <button class="delete-btn" onclick="deleteReport(${r.id})">
                     <i class="fas fa-trash-alt"></i>
                 </button>
