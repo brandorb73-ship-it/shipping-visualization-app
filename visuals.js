@@ -181,6 +181,7 @@ ${tableRows}
 </table>
 </div>
 `, { maxWidth: 420 });
+});   // <-- closes groups.forEach
 };
 
 /* ================= CLUSTER (ONLY CHANGE HERE) ================= */
