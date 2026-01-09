@@ -277,15 +277,16 @@ window.drawCluster = function(data, idx) {
         .style("font-weight", "bold");
 
     /* 🔹 Popup moved to clickLayer */
-    clickLayer.on("click", (e, d) => {
-        const rows = d.rows;
-        d3.selectAll(".cluster-pop").remove();
-        d3.select("#map-frame")
-            .append("div")
-            .attr("class", "cluster-pop")
-            .style("left", e.offsetX + "px")
-            .style("top", e.offsetY + "px")
-            .html(`
+   clickLayer.on("click", (e, d) => {
+    const rows = d.rows;
+    d3.selectAll(".cluster-pop").remove();
+
+    d3.select("#map-frame")
+        .append("div")
+        .attr("class", "cluster-pop")
+        .style("left", e.offsetX + "px")
+        .style("top", e.offsetY + "px")
+        .html(`
 <span class="pop-close" onclick="this.parentElement.remove()">×</span>
 <strong>${rows[0][idx("Exporter")]} → ${rows[0][idx("Importer")]}</strong>
 
@@ -305,10 +306,12 @@ ${rows.map(r => `
 <td>${r[idx("Quantity")] || '-'}</td>
 <td>$${r[idx("Amount($)")]}</td>
 <td>${r[idx("PRODUCT")]}</td>
-</tr>`).join("")}
+</tr>
+`).join("")}
 </tbody>
 </table>
 `);
+});
 
     sim.on("tick", () => {
         link
