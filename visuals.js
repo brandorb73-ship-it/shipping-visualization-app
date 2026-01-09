@@ -283,6 +283,23 @@ window.drawCluster = function(data, idx) {
         .attr("stroke", "#fff")
         .attr("stroke-width", 2);
 
+        // FIXED: Centered Icons
+    node.append("foreignObject")
+        .attr("width", 30)
+        .attr("height", 30)
+        // Center calculation: (width / -2) for horizontal and (height / -2) for vertical centering
+        .attr("x", -15) 
+        .attr("y", -15)
+        .style("pointer-events", "none")
+        .html(d => {
+            let iconClass = "fa-globe"; 
+            if (d.type === 'exp') iconClass = "fa-building"; 
+            if (d.type === 'imp') iconClass = "fa-store";    
+            return `<div style="display:flex; align-items:center; justify-content:center; width:30px; height:30px;">
+                        <i class="fas ${iconClass}" style="color:white; font-size:${d.type==='parent'?'16px':'12px'};"></i>
+                    </div>`;
+        });
+    
     node.append("text")
         .text(d => d.id)
         .attr("y", 35)
