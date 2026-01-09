@@ -165,9 +165,22 @@ window.drawMap = function(groups, idx) {
 <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
 <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
 <b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
-<table class="popup-table">${tableRows}</table>
-</div>`, { maxWidth: 420 });
-    });
+<table class="popup-table" style="margin-top:6px;">
+<thead>
+<tr>
+<th>Date</th>
+<th>Weight (Kg)</th>
+<th>Value (USD)</th>
+<th>Product</th>
+<th>Mode</th>
+</tr>
+</thead>
+<tbody>
+${tableRows}
+</tbody>
+</table>
+</div>
+`, { maxWidth: 420 });
 };
 
 /* ================= CLUSTER (ONLY CHANGE HERE) ================= */
