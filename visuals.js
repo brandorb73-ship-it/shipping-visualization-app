@@ -187,6 +187,7 @@ ${tableRows}
 /* ================= CLUSTER (ONLY CHANGE HERE) ================= */
 
 window.drawCluster = function(data, idx) {
+    window._tradeAgg = {};
     const frame = document.getElementById('map-frame');
     const width = frame.clientWidth;
     const height = frame.clientHeight;
@@ -226,10 +227,24 @@ window.drawCluster = function(data, idx) {
             nodeSet.add(imp);
         }
 
+        const tradeKey = exp + "→" + imp;
+
+if (!window._tradeAgg[tradeKey]) {
+    window._tradeAgg[tradeKey] = {
+        source: exp,
+        target: imp,
+        type: 'trade',
+        rows: []
+    };
+}
+
+window._tradeAgg[tradeKey].rows.push(r);
+
         links.push({ source: gp, target: exp, type: 'link' });
         links.push({ source: dp, target: imp, type: 'link' });
-        links.push({ source: exp, target: imp, type: 'trade', rows: [r] });
     });
+
+Object.values(window._tradeAgg).forEach(l => links.push(l));
 
     const sim = d3.forceSimulation(nodes)
         .force("link", d3.forceLink(links).id(d => d.id).distance(100))
