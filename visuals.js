@@ -153,7 +153,8 @@ window.drawMap = function(groups, idx) {
 
         const tableRows = group.map(s => `
 <tr>
-<td>${formatDate(s[idx("Date")])}</td>
+<td style="white-space:nowrap;">${formatDate(s[idx("Date")])}</td>
+<td>${s[idx("Quantity")] || '-'}</td>
 <td>${s[idx("Weight(Kg)")] || '-'}</td>
 <td>$${s[idx("Amount($)")] || '-'}</td>
 <td>${s[idx("PRODUCT")]}</td>
@@ -168,7 +169,8 @@ window.drawMap = function(groups, idx) {
 <table class="popup-table" style="margin-top:6px;">
 <thead>
 <tr>
-<th>Date</th>
+<th style="min-width:90px; white-space:nowrap;">Date</th>
+<th>Quantity</th>
 <th>Weight (Kg)</th>
 <th>Value (USD)</th>
 <th>Product</th>
@@ -339,8 +341,9 @@ Object.values(window._tradeAgg).forEach(l => links.push(l));
 <table class="popup-table" style="margin-top:6px;">
 <thead>
 <tr>
-<th>Date</th>
+<th style="min-width:90px; white-space:nowrap;">Date</th>
 <th>Quantity</th>
+<th>Weight (Kg)</th>
 <th>Value (USD)</th>
 <th>Product</th>
 </tr>
@@ -348,8 +351,9 @@ Object.values(window._tradeAgg).forEach(l => links.push(l));
 <tbody>
 ${rows.map(r => `
 <tr>
-<td>${formatDate(r[idx("Date")])}</td>
+<td style="white-space:nowrap;">${formatDate(r[idx("Date")])}</td>
 <td>${r[idx("Quantity")] || '-'}</td>
+<td>${r[idx("Weight(Kg)")] || '-'}</td>
 <td>$${r[idx("Amount($)")]}</td>
 <td>${r[idx("PRODUCT")]}</td>
 </tr>
