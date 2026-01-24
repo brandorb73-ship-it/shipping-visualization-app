@@ -52,7 +52,14 @@
     align-items: center; 
     gap: 10px; 
 }
-
+/* Viz title - fixed on top */
+    /* New additions */
+    padding: 10px 16px;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 5;
+    position: relative; /* ensures it stays above map tiles */
+}
 /* Red Delete Button Styling */
 .delete-btn {
     background: #fee2e2;
@@ -208,7 +215,10 @@
                     <tbody id="rep-rows"></tbody>
                 </table>
             </div>
-            <div id="viz-container"><div id="map-frame"></div></div>
+            <div id="viz-container">
+    <div id="viz-title" class="viz-title"></div>
+    <div id="map-frame"></div>
+</div>
         </main>
     </div>
 
@@ -334,6 +344,7 @@ function deleteReport(id) {
     }
 }
         async function initViz(url, title) {
+            document.getElementById('viz-title').innerText = title;
             document.getElementById('list-header').style.display = 'none';
             document.getElementById('list-view').style.display = 'none';
             document.getElementById('viz-header-ui').style.display = 'flex';
