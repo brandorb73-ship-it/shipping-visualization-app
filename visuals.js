@@ -2,13 +2,9 @@
  * BRANDORB VISUALS - STABLE VERSION
  */
 window.clusterMode = 'COUNTRY'; 
+// ✅ Always return the report name
 window.getReportTitle = function () {
-    return (
-        window.currentReport?.title ||
-        window.activeReport?.title ||
-        window.reportName ||
-        "Shipment Intelligence View"
-    );
+    return window.reportName || "";
 };
 
 // FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
