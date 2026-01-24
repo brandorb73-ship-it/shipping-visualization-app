@@ -2,6 +2,14 @@
  * BRANDORB VISUALS - STABLE VERSION
  */
 window.clusterMode = 'COUNTRY'; 
+window.getReportTitle = function () {
+    return (
+        window.currentReport?.title ||
+        window.activeReport?.title ||
+        window.reportName ||
+        "Shipment Intelligence View"
+    );
+};
 
 // FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
 const formatDate = (dateValue) => {
@@ -76,6 +84,11 @@ window.recomputeViz = function() {
 
     const frame = document.getElementById('map-frame');
     frame.innerHTML = "";
+    frame.insertAdjacentHTML("afterbegin", `
+    <div class="viz-title">
+        ${window.getReportTitle()}
+    </div>
+`);
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP') {
