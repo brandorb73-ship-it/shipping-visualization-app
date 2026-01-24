@@ -15,6 +15,33 @@
         #main-content { flex-grow: 1; display: flex; flex-direction: column; width: calc(100vw - 260px); }
         header { background: white; padding: 12px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
         .header-actions { display: flex; gap: 8px; align-items: center; }
+        /* Logo tile */
+.logo-slot { 
+    width: 100%;
+    height: 120px;
+    background: #ffffff !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 20px;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.logo-slot img { 
+    max-width: 100%;
+    max-height: 80px;
+    object-fit: contain;
+}
+
+/* Viz title */
+.viz-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 6px 0 8px 4px;
+}
         .nav-item { 
     padding: 15px 25px; 
     cursor: pointer; 
@@ -98,59 +125,7 @@
     opacity: 0.3;
 }
     <style>
-   /* Container for the logo - The "White Tile" */
-.logo-slot { 
-    width: 100%;
-    height: 100px; 
-    background: #ffffff !important; /* Forces white background */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 15px;
-    padding: 15px;
-    box-sizing: border-box;
-    overflow: hidden;
-}
 
-/* This creates the white tile box */
-.logo-slot { 
-    width: 100%;
-    height: 120px; /* Controlled height */
-    background-color: #ffffff !important; 
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-    border-bottom: 2px solid #e2e8f0;
-    margin-bottom: 20px;
-    padding: 15px;
-    box-sizing: border-box;
-}
-
-/* This forces the logo to stay small and inside the tile */
-.logo-slot img { 
-    max-width: 100% !important; 
-    max-height: 80px !important; /* Limits the vertical size */
-    width: auto !important;
-    height: auto !important;
-    object-fit: contain !important;
-}
-
-/* Styling for the default text logo */
-.logo-slot div {
-    color: #0f172a !important;
-    font-weight: 800;
-    font-size: 22px;
-}
-
-</style>
-/* Title */
-.viz-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 6px 0 8px 4px;
-}
     /* Toggle Switches for Cluster */
     .viz-controls {
         padding: 10px 20px;
