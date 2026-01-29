@@ -1,6 +1,16 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+function sanitizeRows(rows, idx) {
+    return rows.filter(r => {
+        const hasExporter = r[idx("Exporter")]?.trim();
+        const hasImporter = r[idx("Importer")]?.trim();
+        const hasOrigin = r[idx("Origin Country")]?.trim();
+        const hasDest = r[idx("Destination Country")]?.trim();
+
+        return hasExporter && hasImporter && hasOrigin && hasDest;
+    });
+}
 window.clusterMode = 'COUNTRY'; 
 // ✅ Always return the report name
 window.getReportTitle = function () {
@@ -67,7 +77,9 @@ window.recomputeViz = function() {
     const h = window.rawData[0];
     const idx = n => h.findIndex(header => header.trim() === n);
 
-    const filteredRows = window.rawData.slice(1).filter(r => {
+   const cleanedRows = sanitizeRows(window.rawData.slice(1), idx);
+
+const filteredRows = cleanedRows.filter(r => {
         const exporter = r[idx("Exporter")] || "";
         const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||""))
             .toLowerCase().includes(search);
