@@ -1,14 +1,33 @@
 /**
  * BRANDORB VISUALS - STABLE VERSION
  */
+function normalizeHeader(h) {
+    return h
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .replace(/[^a-z0-9 ]/g, "")
+        .trim();
+}
+function buildHeaderIndex(headers) {
+    const map = {};
+    headers.forEach((h, i) => {
+        map[normalizeHeader(h)] = i;
+    });
+    return map;
+}
+
 function sanitizeRows(rows, idx) {
     return rows.filter(r => {
-        const hasExporter = r[idx("Exporter")]?.trim();
-        const hasImporter = r[idx("Importer")]?.trim();
-        const hasOrigin = r[idx("Origin Country")]?.trim();
-        const hasDest = r[idx("Destination Country")]?.trim();
-
-        return hasExporter && hasImporter && hasOrigin && hasDest;
+        try {
+            return (
+                r[idx("Exporter")] &&
+                r[idx("Importer")] &&
+                r[idx("Origin Country")] &&
+                r[idx("Destination Country")]
+            );
+        } catch {
+            return false;
+        }
     });
 }
 window.clusterMode = 'COUNTRY'; 
@@ -75,7 +94,8 @@ window.recomputeViz = function() {
     const dpF = document.getElementById('dest-port-filter').value;
 
     const h = window.rawData[0];
-    const idx = n => h.findIndex(header => header.trim() === n);
+    const headerIndex = buildHeaderIndex(h);
+const idx = name => headerIndex[normalizeHeader(name)];
 
    const cleanedRows = sanitizeRows(window.rawData.slice(1), idx);
 
