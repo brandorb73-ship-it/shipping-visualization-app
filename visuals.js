@@ -136,7 +136,7 @@ window.drawMap = function(groups, idx) {
             [[originLat, originLon], [destLat, destLon]],
             {
                 color: f[idx("COLOR")]?.trim() || '#0ea5e9',
-                weight: 2.5,
+                weight: Math.min(2 + group.length * 0.6, 8),
                 delay: 1000,
                 dashArray: [10, 20]
             }
@@ -170,11 +170,16 @@ window.drawMap = function(groups, idx) {
 <td>${s[idx("Mode of Transportation")] || '-'}</td>
 </tr>`).join("");
 
-        ant.bindPopup(`
+const shipmentCount = group.length;
+const totalQty = group.reduce((s,r)=>s+(+r[idx("Quantity")]||0),0);
+
+ant.bindPopup(`
 <div style="width:380px; max-height:280px; overflow-y:auto;">
+<b>${shipmentCount} Shipments</b><br>
 <b>Exporter:</b> ${f[idx("Exporter")]} (${f[idx("Origin Country")]})<br>
 <b>Importer:</b> ${f[idx("Importer")]} (${f[idx("Destination Country")]})<br>
-<b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}
+<b>Ports:</b> ${f[idx("Origin Port")] || 'N/A'} → ${f[idx("Destination Port")] || 'N/A'}<br>
+<b>Total Quantity:</b> ${totalQty}
 <table class="popup-table" style="margin-top:6px;">
 <thead>
 <tr>
