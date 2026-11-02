@@ -144,8 +144,10 @@ const filteredRows = cleanedRows.filter(r => {
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
     window.LMap = L.map('map-frame').setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
-        .addTo(window.LMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+}).addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
         window.buildColorLegend(routeLayers);
