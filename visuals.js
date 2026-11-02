@@ -1,19 +1,23 @@
 /**
- * BRANDORB VISUALS - FULLY INTEGRATED TRADE VIZ & PLAYBACK
+ * BRANDORB VISUALS - COMPLETE TRADE VIZ, ANIMATION & PORT PARSER ENGINE
  */
+
 function normalizeHeader(h) {
     if (!h) return "";
-    return h
+    return String(h)
         .toLowerCase()
         .replace(/\s+/g, " ")
         .replace(/[^a-z0-9 ]/g, "")
         .trim();
 }
+
 function buildHeaderIndex(headers) {
     const map = {};
-    headers.forEach((h, i) => {
-        map[normalizeHeader(h)] = i;
-    });
+    if (Array.isArray(headers)) {
+        headers.forEach((h, i) => {
+            map[normalizeHeader(h)] = i;
+        });
+    }
     return map;
 }
 
@@ -21,9 +25,9 @@ function sanitizeRows(rows, idx) {
     return rows.filter(r => {
         try {
             return (
-                r[idx("Exporter")] &&
-                r[idx("Importer")] &&
-                r[idx("Origin Country")] &&
+                r[idx("Exporter")] ||
+                r[idx("Importer")] ||
+                r[idx("Origin Country")] ||
                 r[idx("Destination Country")]
             );
         } catch {
@@ -31,13 +35,21 @@ function sanitizeRows(rows, idx) {
         }
     });
 }
+
 window.clusterMode = 'COUNTRY'; 
-// ✅ Always return the report name
+window.viewMode = 'Trade Flow';
+window.playbackSpeed = 1000;
+window.playbackInterval = null;
+window.isPaused = false;
+window.playbackIndex = 0;
+window.customCoords = {};
+window.sortedPlaybackRows = [];
+
 window.getReportTitle = function () {
     return window.reportName || "";
 };
 
-// FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD and common trade date formats
+// Date Formatter
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     const strVal = String(dateValue).trim();
@@ -53,7 +65,7 @@ const formatDate = (dateValue) => {
 
 window.downloadPDF = function () {
     const mapEl = document.getElementById('map-frame');
-    window.LMap.invalidateSize(true);
+    if (window.LMap) window.LMap.invalidateSize(true);
     html2canvas(mapEl, {
         useCORS: true,
         allowTaint: true,
@@ -103,8 +115,9 @@ window.recomputeViz = function() {
 
     const filteredRows = cleanedRows.filter(r => {
         const exporter = r[idx("Exporter")] || "";
-        const sMatch = (exporter + (r[idx("Importer")]||"") + (r[idx("PRODUCT")]||""))
-            .toLowerCase().includes(search);
+        const importer = r[idx("Importer")] || "";
+        const product = r[idx("PRODUCT")] || "";
+        const sMatch = (exporter + importer + product).toLowerCase().includes(search);
         const oMatch = origF === 'All' || r[idx("Origin Country")] === origF;
         const dMatch = destF === 'All' || r[idx("Destination Country")] === destF;
         const opMatch = opF === 'All' || r[idx("Origin Port")] === opF;
@@ -115,21 +128,27 @@ window.recomputeViz = function() {
     const frame = document.getElementById('map-frame');
     frame.innerHTML = "";
     
-    // Inject Top Navigation Toolbar (Matching Reference Screenshots)
+    // Inject Top Control Bar
     window.renderTopControls(frame);
 
-    frame.insertAdjacentHTML("beforeend", `
-    <div class="viz-title">
-        ${window.getReportTitle()}
-    </div>
-`);
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
     if (window.currentTab === 'MAP' || !window.currentTab) {
         window.currentTab = 'MAP';
+
+        // Group rows dynamically according to View Mode
         const groups = {};
         filteredRows.forEach(r => {
-            const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+            let key;
+            if (window.viewMode === 'Country Flow') {
+                key = `${r[idx("Origin Country")]}|${r[idx("Destination Country")]}`;
+            } else if (window.viewMode === 'Port Flow') {
+                key = `${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
+            } else if (window.viewMode === 'Product Flow') {
+                key = `${r[idx("PRODUCT")]}|${r[idx("Origin Country")]}|${r[idx("Destination Country")]}`;
+            } else {
+                key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Country")]}|${r[idx("Destination Country")]}`;
+            }
             if (!groups[key]) groups[key] = [];
             groups[key].push(r);
         });
@@ -146,88 +165,94 @@ window.recomputeViz = function() {
     }
 };
 
-/* ================= ROUTE MAP ================= */
+/* ================= ROUTE MAP DRAWING ================= */
 
 window.drawMap = function(groups, idx) {
     const routeLayers = [];
-    window.LMap = L.map('map-frame').setView([20, 0], 2);
+    window.LMap = L.map('map-frame', { zoomControl: false }).setView([20, 0], 2);
+    L.control.zoom({ position: 'topleft' }).addTo(window.LMap);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
     }).addTo(window.LMap);
 
+    const bounds = [];
+
     groups.forEach((group, gIdx) => {
         window.buildColorLegend(routeLayers);
         const f = group[0];
 
-        // Safe index helper to fallback gracefully
         const getVal = (colName) => {
             const i = idx(colName);
             return (i !== undefined && f[i] !== undefined) ? f[i] : null;
         };
+
+        const oCountry = getVal("Origin Country") || "";
+        const dCountry = getVal("Destination Country") || "";
+        const oPort = getVal("Origin Port") || oCountry;
+        const dPort = getVal("Destination Port") || dCountry;
 
         let lat1 = parseFloat(getVal("Origin latitude"));
         let lon1 = parseFloat(getVal("Origin longitude"));
         let lat2 = parseFloat(getVal("Destination latitude"));
         let lon2 = parseFloat(getVal("Destination longitude"));
 
-        // Fallback to Country / Port coordinate dictionary
-        const oPort = getVal("Origin Port") || getVal("Origin Country");
-        const dPort = getVal("Destination Port") || getVal("Destination Country");
-
-        if ((isNaN(lat1) || isNaN(lon1)) && window.customCoords?.[oPort]) {
-            lat1 = window.customCoords[oPort].lat;
-            lon1 = window.customCoords[oPort].lng;
+        // Custom uploaded coordinates dictionary fallback
+        if ((isNaN(lat1) || isNaN(lon1)) && window.customCoords[oPort]) {
+            lat1 = window.customCoords[oPort].lat; lon1 = window.customCoords[oPort].lng;
         }
-        if ((isNaN(lat2) || isNaN(lon2)) && window.customCoords?.[dPort]) {
-            lat2 = window.customCoords[dPort].lat;
-            lon2 = window.customCoords[dPort].lng;
+        if ((isNaN(lat2) || isNaN(lon2)) && window.customCoords[dPort]) {
+            lat2 = window.customCoords[dPort].lat; lon2 = window.customCoords[dPort].lng;
         }
 
-        // Default world coordinate approximations if missing
+        // Default Geocoding Fallbacks
         if (isNaN(lat1) || isNaN(lon1)) {
-            const fallback = window.lookupDefaultCoord(getVal("Origin Country"));
-            lat1 = fallback.lat; lon1 = fallback.lng;
+            const fb1 = window.lookupCoord(oPort || oCountry);
+            lat1 = fb1.lat; lon1 = fb1.lng;
         }
         if (isNaN(lat2) || isNaN(lon2)) {
-            const fallback = window.lookupDefaultCoord(getVal("Destination Country"));
-            lat2 = fallback.lat; lon2 = fallback.lng;
+            const fb2 = window.lookupCoord(dPort || dCountry);
+            lat2 = fb2.lat; lon2 = fb2.lng;
         }
 
-        const jitter = gIdx * 0.015;
+        const jitter = (gIdx % 5) * 0.02;
         const originLat = lat1 + jitter;
         const originLon = lon1 + jitter;
         const destLat = lat2 + jitter;
         const destLon = lon2 + jitter;
 
+        bounds.push([originLat, originLon], [destLat, destLon]);
+
         const curvePoints = window.getCurvedPoints([originLat, originLon], [destLat, destLon]);
 
-        // Line width logic per View Mode
-        let lineWeight = Math.min(2 + group.length * 0.6, 8);
+        // Dynamic Line Weights per View Mode
+        let lineWeight = Math.min(2 + group.length * 0.8, 10);
         if (window.viewMode === 'Transaction View') {
-            lineWeight = Math.min(4 + group.length * 2.2, 24);
+            lineWeight = Math.min(4 + group.length * 2.5, 20);
         }
 
+        const routeColor = getVal("COLOR")?.trim() || (window.viewMode === 'Transaction View' ? '#f43f5e' : '#0ea5e9');
+
         const routeLine = L.polyline(curvePoints, {
-            color: getVal("COLOR")?.trim() || (window.viewMode === 'Transaction View' ? '#f43f5e' : '#0ea5e9'),
+            color: routeColor,
             weight: lineWeight,
             opacity: 0.85
         }).addTo(window.LMap);
 
-        routeLayers.push({ color: getVal("COLOR") || '#0ea5e9', layer: routeLine });
+        routeLayers.push({ color: routeColor, layer: routeLine });
 
-        // Red Origin Node
+        // Red Origin Marker
         L.circleMarker([originLat, originLon], {
             radius: 5, color: '#ffffff', fillColor: '#ef4444', fillOpacity: 1, weight: 1.5
         }).addTo(window.LMap);
 
-        // Purple Destination Node
+        // Purple Destination Marker
         L.circleMarker([destLat, destLon], {
             radius: 5, color: '#ffffff', fillColor: '#a855f7', fillOpacity: 1, weight: 1.5
         }).addTo(window.LMap);
 
-        // Render Popup Table with updated fields
+        // Table Rows inside Popup
         const tableRows = group.map(s => {
             const g = col => {
                 const i = idx(col);
@@ -253,13 +278,13 @@ window.drawMap = function(groups, idx) {
 
         routeLine.bindPopup(`
 <div class="custom-card-popup">
-<strong style="color:#e11d48; font-size:13px;">${window.viewMode === 'Transaction View' ? 'Export (Supplying) Route' : 'Trade Route'}: ${getVal("Origin Country")} → ${getVal("Destination Country")}</strong><br>
-<span style="font-size:11px; color:#475569;">Total Transactions: ${shipmentCount} | Combined Route Value: $${totalValue.toLocaleString()}</span><br>
-<b style="font-size:11px;">Product:</b> ${getVal("PRODUCT") || 'N/A'}<br>
-<table class="popup-table" style="margin-top:6px; width:100%; font-size:10px;">
+<div class="pop-header">${window.viewMode === 'Transaction View' ? 'Export Route' : 'Trade Route'}: ${oCountry} → ${dCountry}</div>
+<div class="pop-sub">Transactions: <b>${shipmentCount}</b> | Total Value: <b>$${totalValue.toLocaleString()}</b></div>
+<div style="font-size:10px; margin-bottom:4px;"><b>Product:</b> ${getVal("PRODUCT") || 'N/A'}</div>
+<table class="popup-table">
 <thead>
 <tr>
-<th>Date</th><th>Exporter</th><th>Importer</th><th>Weight(Kg)</th><th>Brand</th><th>Variant</th><th>Value</th>
+<th>Date</th><th>Exporter</th><th>Importer</th><th>Weight</th><th>Brand</th><th>Variant</th><th>Value</th>
 </tr>
 </thead>
 <tbody>
@@ -267,11 +292,15 @@ ${tableRows}
 </tbody>
 </table>
 </div>
-`, { maxWidth: 540 });
+`, { maxWidth: 440 });
     });
+
+    if (bounds.length > 0 && window.LMap) {
+        try { window.LMap.fitBounds(bounds, { padding: [40, 40] }); } catch(e){}
+    }
 };
 
-/* ================= CLUSTER ================= */
+/* ================= CLUSTER GRAPH ================= */
 
 window.drawCluster = function(data, idx) {
     window._tradeAgg = {};
@@ -291,12 +320,8 @@ window.drawCluster = function(data, idx) {
     data.forEach(r => {
         const exp = r[idx("Exporter")];
         const imp = r[idx("Importer")];
-        const gp = window.clusterMode === 'COUNTRY'
-            ? r[idx("Origin Country")]
-            : r[idx("PRODUCT")];
-        const dp = window.clusterMode === 'COUNTRY'
-            ? r[idx("Destination Country")]
-            : r[idx("PRODUCT")];
+        const gp = window.clusterMode === 'COUNTRY' ? r[idx("Origin Country")] : r[idx("PRODUCT")];
+        const dp = window.clusterMode === 'COUNTRY' ? r[idx("Destination Country")] : r[idx("PRODUCT")];
 
         [gp, dp].forEach(p => {
             if (p && !nodeSet.has(p)) {
@@ -317,12 +342,7 @@ window.drawCluster = function(data, idx) {
         const tradeKey = exp + "→" + imp;
 
         if (!window._tradeAgg[tradeKey]) {
-            window._tradeAgg[tradeKey] = {
-                source: exp,
-                target: imp,
-                type: 'trade',
-                rows: []
-            };
+            window._tradeAgg[tradeKey] = { source: exp, target: imp, type: 'trade', rows: [] };
         }
 
         window._tradeAgg[tradeKey].rows.push(r);
@@ -346,7 +366,6 @@ window.drawCluster = function(data, idx) {
         .attr("stroke", d => d.type === 'trade' ? "#94a3b8" : "#e2e8f0")
         .attr("stroke-width", 2);
 
-    /* 🔹 Invisible click layer */
     const clickLayer = g.append("g")
         .selectAll("line")
         .data(links.filter(d => d.type === 'trade'))
@@ -377,15 +396,10 @@ window.drawCluster = function(data, idx) {
 
     node.append("circle")
         .attr("r", d => d.type === 'parent' ? 22 : 14)
-        .attr("fill", d => d.type === 'parent'
-            ? '#1e293b'
-            : d.type === 'exp'
-                ? '#0ea5e9'
-                : '#f43f5e')
+        .attr("fill", d => d.type === 'parent' ? '#1e293b' : d.type === 'exp' ? '#0ea5e9' : '#f43f5e')
         .attr("stroke", "#fff")
         .attr("stroke-width", 2);
 
-    // Centered Icons
     node.append("foreignObject")
         .attr("width", 30)
         .attr("height", 30)
@@ -408,7 +422,6 @@ window.drawCluster = function(data, idx) {
         .style("font-size", "9px")
         .style("font-weight", "bold");
 
-    /* 🔹 Popup moved to clickLayer */
     clickLayer.on("click", (e, d) => {
         const rows = d.rows;
         d3.selectAll(".cluster-pop").remove();
@@ -425,10 +438,10 @@ window.drawCluster = function(data, idx) {
 <table class="popup-table" style="margin-top:6px;">
 <thead>
 <tr>
-<th style="min-width:90px; white-space:nowrap;">Date</th>
+<th style="min-width:70px;">Date</th>
 <th>Quantity</th>
-<th>Weight (Kg)</th>
-<th>Value (USD)</th>
+<th>Weight</th>
+<th>Value ($)</th>
 <th>Product</th>
 </tr>
 </thead>
@@ -474,48 +487,29 @@ window.buildColorLegend = function(routes) {
     legend.id = "color-legend";
 
     legend.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-weight:bold; font-size:11px; color:#1e293b;">NETWORK LEGEND</span>
-            <span style="font-size:9px; color:#2563eb; font-weight:bold;">${(window.viewMode || 'TRADE FLOW').toUpperCase()}</span>
-            <button onclick="window.hideLegend=true; document.getElementById('color-legend').remove();" style="border:none; background:none; cursor:pointer; font-size:12px;">✕</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-weight:bold; font-size:10px; color:#0f172a;">NETWORK LEGEND</span>
+            <span style="font-size:9px; color:#2563eb; font-weight:bold; text-transform:uppercase;">${window.viewMode || 'TRADE FLOW'}</span>
+            <button onclick="window.hideLegend=true; document.getElementById('color-legend').remove();" style="border:none; background:none; cursor:pointer; font-size:11px;">✕</button>
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+        <div style="display:flex; align-items:center; gap:6px; margin:2px 0; font-size:10px;">
             <span style="width:8px; height:8px; background:#ef4444; border-radius:50%;"></span> Origin Node
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+        <div style="display:flex; align-items:center; gap:6px; margin:2px 0; font-size:10px;">
             <span style="width:8px; height:8px; background:#a855f7; border-radius:50%;"></span> Destination Node
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+        <div style="display:flex; align-items:center; gap:6px; margin:2px 0; font-size:10px;">
             <span style="width:14px; height:2px; background:#2563eb;"></span> Imports (Blue)
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+        <div style="display:flex; align-items:center; gap:6px; margin:2px 0; font-size:10px;">
             <span style="width:14px; height:2px; background:#ef4444;"></span> Exports (Red)
         </div>
     `;
     container.appendChild(legend);
 };
 
-/* ================= NEW EXTENSIONS & UI TOOLBAR ================= */
+/* ================= TOP CONTROLS & PLAYBACK ================= */
 
-window.viewMode = 'Trade Flow';
-window.playbackSpeed = 1000;
-window.playbackInterval = null;
-window.playbackIndex = 0;
-window.customCoords = {};
-
-// Default Country Lat/Lng fallback dict
-window.lookupDefaultCoord = function(countryName) {
-    const map = {
-        'INDIA': { lat: 20.5937, lng: 78.9629 },
-        'CHINA': { lat: 35.8617, lng: 104.1954 },
-        'UNITED KINGDOM': { lat: 55.3781, lng: -3.4360 },
-        'UNITED STATES': { lat: 37.0902, lng: -95.7129 },
-        'BRAZIL': { lat: -14.2350, lng: -51.9253 }
-    };
-    return map[String(countryName).toUpperCase()] || { lat: 20.0, lng: 0.0 };
-};
-
-// Render Top View Modes Header (Matches Reference Screenshot)
 window.renderTopControls = function(frame) {
     let topBar = document.getElementById('top-viz-toolbar');
     if (!topBar) {
@@ -528,20 +522,24 @@ window.renderTopControls = function(frame) {
     const views = ['Trade Flow', 'Country Flow', 'Port Flow', 'Product Flow', 'Strategic Value Routes', 'High Volume Routes', 'Transaction View'];
     
     topBar.innerHTML = `
-        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
             ${views.map(v => `
                 <button class="view-btn ${window.viewMode === v ? 'active' : ''}" onclick="window.setViewMode('${v}')">${v}</button>
             `).join('')}
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-            <label class="spd-btn" style="cursor:pointer;" title="Upload Port Coordinate Spreadsheet">
+        <div style="display:flex; gap:6px; align-items:center;">
+            <label class="spd-btn" style="cursor:pointer;" title="Upload Port Coordinate XLSX / CSV">
                 📁 Port Coords
-                <input type="file" accept=".xlsx, .csv" style="display:none;" onchange="window.handlePortCoordinateUpload(this)">
+                <input type="file" accept=".xlsx, .xls, .csv" style="display:none;" onchange="window.handlePortCoordinateUpload(this)">
             </label>
-            <button class="spd-btn ${window.playbackSpeed===2000?'active':''}" onclick="window.setSpeed('slow', this)">Slow</button>
-            <button class="spd-btn ${window.playbackSpeed===1000?'active':''}" onclick="window.setSpeed('1x', this)">1x</button>
-            <button class="spd-btn ${window.playbackSpeed===300?'active':''}" onclick="window.setSpeed('fast', this)">Fast</button>
-            <button class="play-btn" onclick="window.togglePlayback()">${window.playbackInterval ? '⏹ Stop Playback' : '▶ Animate Playback'}</button>
+            <button class="spd-btn ${window.playbackSpeed===2000?'active':''}" onclick="window.setSpeed(2000, this)">Slow</button>
+            <button class="spd-btn ${window.playbackSpeed===1000?'active':''}" onclick="window.setSpeed(1000, this)">1x</button>
+            <button class="spd-btn ${window.playbackSpeed===300?'active':''}" onclick="window.setSpeed(300, this)">Fast</button>
+            
+            <button class="play-btn" onclick="window.togglePlayPause()">
+                ${window.playbackInterval ? (window.isPaused ? '▶ Resume' : '⏸ Pause') : '▶ Animate Playback'}
+            </button>
+            ${window.playbackInterval ? `<button class="stop-btn" onclick="window.stopPlayback()">⏹ Stop</button>` : ''}
         </div>
     `;
 };
@@ -551,28 +549,20 @@ window.setViewMode = function(mode) {
     window.recomputeViz();
 };
 
-window.getCurvedPoints = function(start, end) {
-    const lat1 = start[0], lng1 = start[1];
-    const lat2 = end[0], lng2 = end[1];
-    const midLat = (lat1 + lat2) / 2 + (lng2 - lng1) * 0.15;
-    const midLng = (lng1 + lng2) / 2 - (lat2 - lat1) * 0.15;
-
-    const points = [];
-    for (let t = 0; t <= 1; t += 0.05) {
-        const curLat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * midLat + t * t * lat2;
-        const curLng = (1 - t) * (1 - t) * lng1 + 2 * (1 - t) * t * midLng + t * t * lng2;
-        points.push([curLat, curLng]);
+window.setSpeed = function(spd, elem) {
+    window.playbackSpeed = spd;
+    if (window.playbackInterval && !window.isPaused) {
+        window.startPlaybackLoop();
     }
-    return points;
+    window.renderTopControls(document.getElementById('map-frame'));
 };
 
-// Playback Controls
-window.togglePlayback = function() {
-    if (window.playbackInterval) {
-        window.stopPlayback();
-        window.recomputeViz();
-    } else {
+window.togglePlayPause = function() {
+    if (!window.playbackInterval) {
         window.startPlayback();
+    } else {
+        window.isPaused = !window.isPaused;
+        window.renderTopControls(document.getElementById('map-frame'));
     }
 };
 
@@ -582,23 +572,36 @@ window.startPlayback = function() {
     const headerIndex = buildHeaderIndex(h);
     const idx = name => headerIndex[normalizeHeader(name)];
 
-    const sortedRows = sanitizeRows(window.rawData.slice(1), idx).sort((a, b) => {
+    window.sortedPlaybackRows = sanitizeRows(window.rawData.slice(1), idx).sort((a, b) => {
         return new Date(formatDate(a[idx("Date")])) - new Date(formatDate(b[idx("Date")]));
     });
 
-    window.stopPlayback();
     window.playbackIndex = 0;
+    window.isPaused = false;
+    window.startPlaybackLoop();
+};
+
+window.startPlaybackLoop = function() {
+    if (window.playbackInterval) clearInterval(window.playbackInterval);
+
+    const h = window.rawData[0];
+    const headerIndex = buildHeaderIndex(h);
+    const idx = name => headerIndex[normalizeHeader(name)];
 
     window.playbackInterval = setInterval(() => {
-        if (window.playbackIndex >= sortedRows.length) {
+        if (window.isPaused) return;
+
+        if (window.playbackIndex >= window.sortedPlaybackRows.length) {
             window.stopPlayback();
             return;
         }
 
-        const row = sortedRows[window.playbackIndex];
+        const row = window.sortedPlaybackRows[window.playbackIndex];
         window.playbackIndex++;
-        window.renderSinglePlaybackStep(row, sortedRows.length, idx);
+        window.renderSinglePlaybackStep(row, window.sortedPlaybackRows.length, idx);
     }, window.playbackSpeed);
+
+    window.renderTopControls(document.getElementById('map-frame'));
 };
 
 window.stopPlayback = function() {
@@ -606,14 +609,8 @@ window.stopPlayback = function() {
         clearInterval(window.playbackInterval);
         window.playbackInterval = null;
     }
+    window.isPaused = false;
     document.getElementById('playback-hud')?.remove();
-};
-
-window.setSpeed = function(spd, elem) {
-    if (spd === 'slow') window.playbackSpeed = 2000;
-    if (spd === '1x') window.playbackSpeed = 1000;
-    if (spd === 'fast') window.playbackSpeed = 300;
-    if (window.playbackInterval) window.startPlayback();
     window.renderTopControls(document.getElementById('map-frame'));
 };
 
@@ -623,63 +620,131 @@ window.renderSinglePlaybackStep = function(r, total, idx) {
 
     const g = col => {
         const i = idx(col);
-        return (i !== undefined && r[i] !== undefined) ? r[i] : 'N/A';
+        return (i !== undefined && r[i] !== undefined && r[i] !== '') ? r[i] : 'N/A';
     };
 
     const hud = document.createElement('div');
     hud.id = 'playback-hud';
     hud.className = 'playback-card-hud';
     hud.innerHTML = `
-        <div style="background:#0f172a; color:#fff; padding:12px; border-radius:8px; font-family:sans-serif; width:290px; font-size:11px; box-shadow:0 4px 14px rgba(0,0,0,0.3);">
-            <div style="font-weight:bold; border-bottom:1px solid #334155; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; color:#38bdf8;">
-                <span>RECORD ${window.playbackIndex} / ${total}</span>
-                <span>📅 ${formatDate(g("Date"))}</span>
+        <div class="hud-box">
+            <div class="hud-header">
+                <span style="color:#38bdf8;">RECORD ${window.playbackIndex} / ${total}</span>
+                <span style="color:#94a3b8;">📅 ${formatDate(g("Date"))}</span>
             </div>
-            <table style="width:100%; border-collapse:collapse; color:#cbd5e1; font-size:10px; line-height:1.5;">
-                <tr><td>EXPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Exporter")}</td></tr>
-                <tr><td>IMPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Importer")}</td></tr>
-                <tr><td>ORIGIN</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Origin Country")}</td></tr>
-                <tr><td>DESTINATION</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Destination Country")}</td></tr>
-                <tr><td>PRODUCT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("PRODUCT")}</td></tr>
-                <tr><td>HS CODE</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("HS Code")}</td></tr>
-                <tr><td>BRAND</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("BRAND")}</td></tr>
-                <tr><td>VARIANT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("VARIANT")}</td></tr>
-                <tr><td>WEIGHT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Weight(Kg)")} Kg</td></tr>
-                <tr><td>QUANTITY</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Quantity")} ${g("Quantity Unit")}</td></tr>
-                <tr><td>VALUE</td><td style="text-align:right; font-weight:bold; color:#4ade80;">$${g("Amount($)")}</td></tr>
+            <table class="hud-table">
+                <tr><td>EXPORTER</td><td class="hud-val">${g("Exporter")}</td></tr>
+                <tr><td>IMPORTER</td><td class="hud-val">${g("Importer")}</td></tr>
+                <tr><td>ORIGIN</td><td class="hud-val">${g("Origin Country")}</td></tr>
+                <tr><td>DESTINATION</td><td class="hud-val">${g("Destination Country")}</td></tr>
+                <tr><td>PRODUCT</td><td class="hud-val">${g("PRODUCT")}</td></tr>
+                <tr><td>HS CODE</td><td class="hud-val">${g("HS Code")}</td></tr>
+                <tr><td>BRAND</td><td class="hud-val">${g("BRAND")}</td></tr>
+                <tr><td>VARIANT</td><td class="hud-val">${g("VARIANT")}</td></tr>
+                <tr><td>WEIGHT</td><td class="hud-val">${g("Weight(Kg)")} Kg</td></tr>
+                <tr><td>QUANTITY</td><td class="hud-val">${g("Quantity")} ${g("Quantity Unit") !== 'N/A' ? g("Quantity Unit") : ''}</td></tr>
+                <tr><td>VALUE</td><td class="hud-val-green">$${g("Amount($)")}</td></tr>
             </table>
         </div>
     `;
     frame.appendChild(hud);
+
+    // Focus single line on map for active playback step
+    if (window.LMap) {
+        const oC = g("Origin Country");
+        const dC = g("Destination Country");
+        const fb1 = window.lookupCoord(g("Origin Port") !== 'N/A' ? g("Origin Port") : oC);
+        const fb2 = window.lookupCoord(g("Destination Port") !== 'N/A' ? g("Destination Port") : dC);
+        
+        L.polyline(window.getCurvedPoints([fb1.lat, fb1.lng], [fb2.lat, fb2.lng]), {
+            color: '#38bdf8', weight: 4, opacity: 0.9
+        }).addTo(window.LMap);
+    }
 };
 
-// XLSX/CSV Port Coordinates Reader
+/* ================= PORT SPREADSHEET PARSER ================= */
+
 window.handlePortCoordinateUpload = function(fileInput) {
     const file = fileInput.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const json = XLSX.utils.sheet_to_json(sheet);
 
-            json.forEach(row => {
-                const key = row['Port'] || row['Country'];
-                if (key && row['Latitude'] && row['Longitude']) {
-                    window.customCoords[String(key).trim()] = {
-                        lat: parseFloat(row['Latitude']),
-                        lng: parseFloat(row['Longitude'])
-                    };
-                }
-            });
-            alert('Port coordinates uploaded successfully!');
-            window.recomputeViz();
-        } catch(err) {
-            alert('Failed to parse coordinate file.');
-        }
+    if (file.name.endsWith('.csv')) {
+        reader.onload = function(e) {
+            const lines = e.target.result.split('\n');
+            if (lines.length > 1) {
+                const headers = lines[0].split(',').map(h => normalizeHeader(h));
+                lines.slice(1).forEach(l => {
+                    const cols = l.split(',');
+                    if (cols.length >= 3) {
+                        const port = cols[0]?.trim();
+                        const lat = parseFloat(cols[headers.indexOf('latitude') !== -1 ? headers.indexOf('latitude') : 1]);
+                        const lng = parseFloat(cols[headers.indexOf('longitude') !== -1 ? headers.indexOf('longitude') : 2]);
+                        if (port && !isNaN(lat) && !isNaN(lng)) {
+                            window.customCoords[port] = { lat, lng };
+                        }
+                    }
+                });
+                alert('Port Coordinates Loaded Successfully!');
+                window.recomputeViz();
+            }
+        };
+        reader.readAsText(file);
+    } else {
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet);
+
+                json.forEach(row => {
+                    let port = row['Port'] || row['Country'] || row['Facility'] || row['Short Code'];
+                    let lat = parseFloat(row['Latitude'] || row['lat'] || row['Lat']);
+                    let lng = parseFloat(row['Longitude'] || row['lng'] || row['Long'] || row['Lon']);
+
+                    if (port && !isNaN(lat) && !isNaN(lng)) {
+                        window.customCoords[String(port).trim()] = { lat, lng };
+                    }
+                });
+                alert('Port Coordinates Loaded Successfully!');
+                window.recomputeViz();
+            } catch (err) {
+                alert('Failed to parse coordinate XLSX file. Ensure file has columns: Port/Country, Latitude, Longitude.');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+};
+
+// Geocoding Fallbacks
+window.lookupCoord = function(name) {
+    if (!name) return { lat: 20.0, lng: 0.0 };
+    const key = String(name).toUpperCase().trim();
+    const map = {
+        'INDIA': { lat: 20.5937, lng: 78.9629 },
+        'CHINA': { lat: 35.8617, lng: 104.1954 },
+        'TURKEY': { lat: 38.9637, lng: 35.2433 },
+        'ARMENIA': { lat: 40.0691, lng: 45.0382 },
+        'UNITED KINGDOM': { lat: 55.3781, lng: -3.4360 },
+        'UNITED STATES': { lat: 37.0902, lng: -95.7129 },
+        'BRAZIL': { lat: -14.2350, lng: -51.9253 }
     };
-    reader.readAsArrayBuffer(file);
+    return map[key] || window.customCoords[key] || { lat: (key.length * 7) % 50, lng: (key.length * 13) % 120 };
+};
+
+window.getCurvedPoints = function(start, end) {
+    const lat1 = start[0], lng1 = start[1];
+    const lat2 = end[0], lng2 = end[1];
+    const midLat = (lat1 + lat2) / 2 + (lng2 - lng1) * 0.12;
+    const midLng = (lng1 + lng2) / 2 - (lat2 - lat1) * 0.12;
+
+    const points = [];
+    for (let t = 0; t <= 1; t += 0.05) {
+        const curLat = (1 - t) * (1 - t) * lat1 + 2 * (1 - t) * t * midLat + t * t * lat2;
+        const curLng = (1 - t) * (1 - t) * lng1 + 2 * (1 - t) * t * midLng + t * t * lng2;
+        points.push([curLat, curLng]);
+    }
+    return points;
 };
