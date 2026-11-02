@@ -1,7 +1,8 @@
 /**
- * BRANDORB VISUALS - EXTENDED STABLE & PLAYBACK VERSION
+ * BRANDORB VISUALS - FULLY INTEGRATED TRADE VIZ & PLAYBACK
  */
 function normalizeHeader(h) {
+    if (!h) return "";
     return h
         .toLowerCase()
         .replace(/\s+/g, " ")
@@ -36,7 +37,7 @@ window.getReportTitle = function () {
     return window.reportName || "";
 };
 
-// FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD
+// FIXED DATE NORMALIZER: Specifically targets YYYY-MM-DD and common trade date formats
 const formatDate = (dateValue) => {
     if (!dateValue) return 'N/A';
     const strVal = String(dateValue).trim();
@@ -74,6 +75,7 @@ window.populateFilters = function() {
         const i = h.findIndex(header => header.trim() === col);
         if (i === -1) return;
         const el = document.getElementById(id);
+        if (!el) return;
         const vals = [...new Set(data.map(r => r[i]))].filter(v => v).sort();
         el.innerHTML = `<option value="All">All ${lbl}</option>` +
             vals.map(v => `<option value="${v}">${v}</option>`).join('');
@@ -112,14 +114,19 @@ window.recomputeViz = function() {
 
     const frame = document.getElementById('map-frame');
     frame.innerHTML = "";
-    frame.insertAdjacentHTML("afterbegin", `
+    
+    // Inject Top Navigation Toolbar (Matching Reference Screenshots)
+    window.renderTopControls(frame);
+
+    frame.insertAdjacentHTML("beforeend", `
     <div class="viz-title">
         ${window.getReportTitle()}
     </div>
 `);
     if (window.LMap) { window.LMap.remove(); window.LMap = null; }
 
-    if (window.currentTab === 'MAP') {
+    if (window.currentTab === 'MAP' || !window.currentTab) {
+        window.currentTab = 'MAP';
         const groups = {};
         filteredRows.forEach(r => {
             const key = `${r[idx("Exporter")]}|${r[idx("Importer")]}|${r[idx("Origin Port")]}|${r[idx("Destination Port")]}`;
@@ -128,7 +135,7 @@ window.recomputeViz = function() {
         });
         window.drawMap(Object.values(groups), idx);
     } else {
-        frame.insertAdjacentHTML('afterbegin', `
+        frame.insertAdjacentHTML('beforeend', `
         <div class="viz-controls">
             <button class="toggle-btn ${window.clusterMode==='COUNTRY'?'active':''}"
                 onclick="window.clusterMode='COUNTRY'; recomputeViz()">Group by Country</button>
@@ -147,21 +154,28 @@ window.drawMap = function(groups, idx) {
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution: '&copy; OpenStreetMap contributors'
     }).addTo(window.LMap);
 
     groups.forEach((group, gIdx) => {
         window.buildColorLegend(routeLayers);
         const f = group[0];
 
-        let lat1 = parseFloat(f[idx("Origin latitude")]);
-        let lon1 = parseFloat(f[idx("Origin longitude")]);
-        let lat2 = parseFloat(f[idx("Destination latitude")]);
-        let lon2 = parseFloat(f[idx("Destination longitude")]);
+        // Safe index helper to fallback gracefully
+        const getVal = (colName) => {
+            const i = idx(colName);
+            return (i !== undefined && f[i] !== undefined) ? f[i] : null;
+        };
 
-        // Check custom port dictionary lookup fallback
-        const oPort = f[idx("Origin Port")] || f[idx("Origin Country")];
-        const dPort = f[idx("Destination Port")] || f[idx("Destination Country")];
+        let lat1 = parseFloat(getVal("Origin latitude"));
+        let lon1 = parseFloat(getVal("Origin longitude"));
+        let lat2 = parseFloat(getVal("Destination latitude"));
+        let lon2 = parseFloat(getVal("Destination longitude"));
+
+        // Fallback to Country / Port coordinate dictionary
+        const oPort = getVal("Origin Port") || getVal("Origin Country");
+        const dPort = getVal("Destination Port") || getVal("Destination Country");
+
         if ((isNaN(lat1) || isNaN(lon1)) && window.customCoords?.[oPort]) {
             lat1 = window.customCoords[oPort].lat;
             lon1 = window.customCoords[oPort].lng;
@@ -171,9 +185,14 @@ window.drawMap = function(groups, idx) {
             lon2 = window.customCoords[dPort].lng;
         }
 
-        if (isNaN(lat1) || isNaN(lat2)) {
-            window.promptMissingCoordinate(oPort, dPort);
-            return;
+        // Default world coordinate approximations if missing
+        if (isNaN(lat1) || isNaN(lon1)) {
+            const fallback = window.lookupDefaultCoord(getVal("Origin Country"));
+            lat1 = fallback.lat; lon1 = fallback.lng;
+        }
+        if (isNaN(lat2) || isNaN(lon2)) {
+            const fallback = window.lookupDefaultCoord(getVal("Destination Country"));
+            lat2 = fallback.lat; lon2 = fallback.lng;
         }
 
         const jitter = gIdx * 0.015;
@@ -182,65 +201,65 @@ window.drawMap = function(groups, idx) {
         const destLat = lat2 + jitter;
         const destLon = lon2 + jitter;
 
-        // Calculate Curved Bezier points
         const curvePoints = window.getCurvedPoints([originLat, originLon], [destLat, destLon]);
 
-        // Determine line width based on View Mode
+        // Line width logic per View Mode
         let lineWeight = Math.min(2 + group.length * 0.6, 8);
         if (window.viewMode === 'Transaction View') {
-            lineWeight = Math.min(4 + group.length * 1.8, 22);
+            lineWeight = Math.min(4 + group.length * 2.2, 24);
         }
 
         const routeLine = L.polyline(curvePoints, {
-            color: f[idx("COLOR")]?.trim() || (window.viewMode === 'Transaction View' ? '#f43f5e' : '#0ea5e9'),
+            color: getVal("COLOR")?.trim() || (window.viewMode === 'Transaction View' ? '#f43f5e' : '#0ea5e9'),
             weight: lineWeight,
             opacity: 0.85
         }).addTo(window.LMap);
 
-        routeLayers.push({ color: f[idx("COLOR")] || '#0ea5e9', layer: routeLine });
+        routeLayers.push({ color: getVal("COLOR") || '#0ea5e9', layer: routeLine });
 
-        // Origin Node (Red Dot)
+        // Red Origin Node
         L.circleMarker([originLat, originLon], {
-            radius: 5,
-            color: '#ffffff',
-            fillColor: '#ef4444',
-            fillOpacity: 1,
-            weight: 1.5
+            radius: 5, color: '#ffffff', fillColor: '#ef4444', fillOpacity: 1, weight: 1.5
         }).addTo(window.LMap);
 
-        // Destination Node (Purple Dot)
+        // Purple Destination Node
         L.circleMarker([destLat, destLon], {
-            radius: 5,
-            color: '#ffffff',
-            fillColor: '#a855f7',
-            fillOpacity: 1,
-            weight: 1.5
+            radius: 5, color: '#ffffff', fillColor: '#a855f7', fillOpacity: 1, weight: 1.5
         }).addTo(window.LMap);
 
-        const tableRows = group.map(s => `
+        // Render Popup Table with updated fields
+        const tableRows = group.map(s => {
+            const g = col => {
+                const i = idx(col);
+                return (i !== undefined && s[i] !== undefined) ? s[i] : '-';
+            };
+            return `
 <tr>
-<td style="white-space:nowrap;">${formatDate(s[idx("Date")])}</td>
-<td>${s[idx("Exporter")] || '-'}</td>
-<td>${s[idx("Importer")] || '-'}</td>
-<td>${s[idx("Weight(Kg)")] || '-'}</td>
-<td>${s[idx("Brand")] || 'NOT DECLARED'}</td>
-<td>${s[idx("Grade")] || 'RUTILE'}</td>
-<td>${s[idx("Variant")] || '-'}</td>
-<td>$${s[idx("Amount($)")] || '-'}</td>
-</tr>`).join("");
+<td style="white-space:nowrap;">${formatDate(g("Date"))}</td>
+<td>${g("Exporter")}</td>
+<td>${g("Importer")}</td>
+<td>${g("Weight(Kg)")}</td>
+<td>${g("BRAND") || 'NOT DECLARED'}</td>
+<td>${g("VARIANT") || '-'}</td>
+<td>$${g("Amount($)")}</td>
+</tr>`;
+        }).join("");
 
         const shipmentCount = group.length;
-        const totalValue = group.reduce((s,r)=>s+(+r[idx("Amount($)")]||0),0);
+        const totalValue = group.reduce((s, r) => {
+            const i = idx("Amount($)");
+            return s + (i !== undefined ? (+r[i] || 0) : 0);
+        }, 0);
 
         routeLine.bindPopup(`
 <div class="custom-card-popup">
-<strong style="color:#e11d48; font-size:14px;">${window.viewMode === 'Transaction View' ? 'Export (Supplying) Route' : 'Trade Route'}: ${f[idx("Origin Country")]} → ${f[idx("Destination Country")]}</strong><br>
-<span style="font-size:12px; color:#475569;">Total Transactions: ${shipmentCount} | Combined Route Value: $${totalValue.toLocaleString()}</span><br>
-<b>Product:</b> ${f[idx("PRODUCT")] || 'N/A'}<br>
-<table class="popup-table" style="margin-top:8px; width:100%;">
+<strong style="color:#e11d48; font-size:13px;">${window.viewMode === 'Transaction View' ? 'Export (Supplying) Route' : 'Trade Route'}: ${getVal("Origin Country")} → ${getVal("Destination Country")}</strong><br>
+<span style="font-size:11px; color:#475569;">Total Transactions: ${shipmentCount} | Combined Route Value: $${totalValue.toLocaleString()}</span><br>
+<b style="font-size:11px;">Product:</b> ${getVal("PRODUCT") || 'N/A'}<br>
+<table class="popup-table" style="margin-top:6px; width:100%; font-size:10px;">
 <thead>
 <tr>
-<th>Date</th><th>Exporter</th><th>Importer</th><th>Weight(Kg)</th><th>Brand</th><th>Grade</th><th>Variant</th><th>Value</th>
+<th>Date</th><th>Exporter</th><th>Importer</th><th>Weight(Kg)</th><th>Brand</th><th>Variant</th><th>Value</th>
 </tr>
 </thead>
 <tbody>
@@ -248,7 +267,7 @@ ${tableRows}
 </tbody>
 </table>
 </div>
-`, { maxWidth: 520 });
+`, { maxWidth: 540 });
     });
 };
 
@@ -455,28 +474,28 @@ window.buildColorLegend = function(routes) {
     legend.id = "color-legend";
 
     legend.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:bold; font-size:12px; color:#1e293b;">NETWORK LEGEND</span>
-            <span style="font-size:10px; color:#3b82f6; text-transform:uppercase; font-weight:bold;">${window.viewMode || 'TRADE FLOW'}</span>
-            <button onclick="window.hideLegend=true; document.getElementById('color-legend').remove();" style="border:none; background:none; cursor:pointer;">✕</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:bold; font-size:11px; color:#1e293b;">NETWORK LEGEND</span>
+            <span style="font-size:9px; color:#2563eb; font-weight:bold;">${(window.viewMode || 'TRADE FLOW').toUpperCase()}</span>
+            <button onclick="window.hideLegend=true; document.getElementById('color-legend').remove();" style="border:none; background:none; cursor:pointer; font-size:12px;">✕</button>
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:4px 0; font-size:11px;">
-            <span style="width:10px; height:10px; background:#ef4444; border-radius:50%;"></span> Origin Node
+        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+            <span style="width:8px; height:8px; background:#ef4444; border-radius:50%;"></span> Origin Node
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:4px 0; font-size:11px;">
-            <span style="width:10px; height:10px; background:#a855f7; border-radius:50%;"></span> Destination Node
+        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+            <span style="width:8px; height:8px; background:#a855f7; border-radius:50%;"></span> Destination Node
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:4px 0; font-size:11px;">
-            <span style="width:16px; height:2px; background:#2563eb;"></span> Imports (Blue)
+        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+            <span style="width:14px; height:2px; background:#2563eb;"></span> Imports (Blue)
         </div>
-        <div style="display:flex; align-items:center; gap:6px; margin:4px 0; font-size:11px;">
-            <span style="width:16px; height:2px; background:#ef4444;"></span> Exports (Red)
+        <div style="display:flex; align-items:center; gap:6px; margin:3px 0; font-size:11px;">
+            <span style="width:14px; height:2px; background:#ef4444;"></span> Exports (Red)
         </div>
     `;
     container.appendChild(legend);
 };
 
-/* ================= NEW EXTENSIONS & VIEW MODES ================= */
+/* ================= NEW EXTENSIONS & UI TOOLBAR ================= */
 
 window.viewMode = 'Trade Flow';
 window.playbackSpeed = 1000;
@@ -484,7 +503,54 @@ window.playbackInterval = null;
 window.playbackIndex = 0;
 window.customCoords = {};
 
-// Curved line helper
+// Default Country Lat/Lng fallback dict
+window.lookupDefaultCoord = function(countryName) {
+    const map = {
+        'INDIA': { lat: 20.5937, lng: 78.9629 },
+        'CHINA': { lat: 35.8617, lng: 104.1954 },
+        'UNITED KINGDOM': { lat: 55.3781, lng: -3.4360 },
+        'UNITED STATES': { lat: 37.0902, lng: -95.7129 },
+        'BRAZIL': { lat: -14.2350, lng: -51.9253 }
+    };
+    return map[String(countryName).toUpperCase()] || { lat: 20.0, lng: 0.0 };
+};
+
+// Render Top View Modes Header (Matches Reference Screenshot)
+window.renderTopControls = function(frame) {
+    let topBar = document.getElementById('top-viz-toolbar');
+    if (!topBar) {
+        topBar = document.createElement('div');
+        topBar.id = 'top-viz-toolbar';
+        topBar.className = 'top-viz-toolbar';
+        frame.parentElement.insertBefore(topBar, frame);
+    }
+
+    const views = ['Trade Flow', 'Country Flow', 'Port Flow', 'Product Flow', 'Strategic Value Routes', 'High Volume Routes', 'Transaction View'];
+    
+    topBar.innerHTML = `
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            ${views.map(v => `
+                <button class="view-btn ${window.viewMode === v ? 'active' : ''}" onclick="window.setViewMode('${v}')">${v}</button>
+            `).join('')}
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <label class="spd-btn" style="cursor:pointer;" title="Upload Port Coordinate Spreadsheet">
+                📁 Port Coords
+                <input type="file" accept=".xlsx, .csv" style="display:none;" onchange="window.handlePortCoordinateUpload(this)">
+            </label>
+            <button class="spd-btn ${window.playbackSpeed===2000?'active':''}" onclick="window.setSpeed('slow', this)">Slow</button>
+            <button class="spd-btn ${window.playbackSpeed===1000?'active':''}" onclick="window.setSpeed('1x', this)">1x</button>
+            <button class="spd-btn ${window.playbackSpeed===300?'active':''}" onclick="window.setSpeed('fast', this)">Fast</button>
+            <button class="play-btn" onclick="window.togglePlayback()">${window.playbackInterval ? '⏹ Stop Playback' : '▶ Animate Playback'}</button>
+        </div>
+    `;
+};
+
+window.setViewMode = function(mode) {
+    window.viewMode = mode;
+    window.recomputeViz();
+};
+
 window.getCurvedPoints = function(start, end) {
     const lat1 = start[0], lng1 = start[1];
     const lat2 = end[0], lng2 = end[1];
@@ -500,16 +566,16 @@ window.getCurvedPoints = function(start, end) {
     return points;
 };
 
-// View Mode Switching
-window.setViewMode = function(mode) {
-    window.viewMode = mode;
-    document.querySelectorAll('.view-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.innerText.trim() === mode);
-    });
-    window.recomputeViz();
+// Playback Controls
+window.togglePlayback = function() {
+    if (window.playbackInterval) {
+        window.stopPlayback();
+        window.recomputeViz();
+    } else {
+        window.startPlayback();
+    }
 };
 
-// Animated Playback Engine
 window.startPlayback = function() {
     if (!window.rawData || window.rawData.length < 2) return;
     const h = window.rawData[0];
@@ -544,98 +610,76 @@ window.stopPlayback = function() {
 };
 
 window.setSpeed = function(spd, elem) {
-    document.querySelectorAll('.spd-btn').forEach(b => b.classList.remove('active'));
-    elem.classList.add('active');
     if (spd === 'slow') window.playbackSpeed = 2000;
     if (spd === '1x') window.playbackSpeed = 1000;
     if (spd === 'fast') window.playbackSpeed = 300;
     if (window.playbackInterval) window.startPlayback();
+    window.renderTopControls(document.getElementById('map-frame'));
 };
 
 window.renderSinglePlaybackStep = function(r, total, idx) {
     const frame = document.getElementById('map-frame');
     document.getElementById('playback-hud')?.remove();
 
+    const g = col => {
+        const i = idx(col);
+        return (i !== undefined && r[i] !== undefined) ? r[i] : 'N/A';
+    };
+
     const hud = document.createElement('div');
     hud.id = 'playback-hud';
     hud.className = 'playback-card-hud';
     hud.innerHTML = `
-        <div style="background:#0f172a; color:#fff; padding:12px; border-radius:8px; font-family:sans-serif; width:300px; font-size:11px;">
-            <div style="font-weight:bold; border-bottom:1px solid #334155; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between;">
+        <div style="background:#0f172a; color:#fff; padding:12px; border-radius:8px; font-family:sans-serif; width:290px; font-size:11px; box-shadow:0 4px 14px rgba(0,0,0,0.3);">
+            <div style="font-weight:bold; border-bottom:1px solid #334155; padding-bottom:6px; margin-bottom:8px; display:flex; justify-content:space-between; color:#38bdf8;">
                 <span>RECORD ${window.playbackIndex} / ${total}</span>
-                <span>📅 ${formatDate(r[idx("Date")])}</span>
+                <span>📅 ${formatDate(g("Date"))}</span>
             </div>
-            <table style="width:100%; border-collapse:collapse; color:#cbd5e1;">
-                <tr><td>EXPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Exporter")] || 'N/A'}</td></tr>
-                <tr><td>IMPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Importer")] || 'N/A'}</td></tr>
-                <tr><td>ORIGIN</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Origin Country")] || 'N/A'}</td></tr>
-                <tr><td>DESTINATION</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Destination Country")] || 'N/A'}</td></tr>
-                <tr><td>PRODUCT</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("PRODUCT")] || 'N/A'}</td></tr>
-                <tr><td>BRAND</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Brand")] || 'NOT DECLARED'}</td></tr>
-                <tr><td>GRADE</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Grade")] || 'RUTILE'}</td></tr>
-                <tr><td>VARIANT</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Variant")] || 'DR 2100'}</td></tr>
-                <tr><td>WEIGHT</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Weight(Kg)")] || '-'} MT</td></tr>
-                <tr><td>QUANTITY</td><td style="text-align:right; font-weight:bold; color:#fff;">${r[idx("Quantity")] || '-'}</td></tr>
-                <tr><td>VALUE</td><td style="text-align:right; font-weight:bold; color:#fff;">$${r[idx("Amount($)")] || '-'}</td></tr>
+            <table style="width:100%; border-collapse:collapse; color:#cbd5e1; font-size:10px; line-height:1.5;">
+                <tr><td>EXPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Exporter")}</td></tr>
+                <tr><td>IMPORTER</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Importer")}</td></tr>
+                <tr><td>ORIGIN</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Origin Country")}</td></tr>
+                <tr><td>DESTINATION</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Destination Country")}</td></tr>
+                <tr><td>PRODUCT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("PRODUCT")}</td></tr>
+                <tr><td>HS CODE</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("HS Code")}</td></tr>
+                <tr><td>BRAND</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("BRAND")}</td></tr>
+                <tr><td>VARIANT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("VARIANT")}</td></tr>
+                <tr><td>WEIGHT</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Weight(Kg)")} Kg</td></tr>
+                <tr><td>QUANTITY</td><td style="text-align:right; font-weight:bold; color:#fff;">${g("Quantity")} ${g("Quantity Unit")}</td></tr>
+                <tr><td>VALUE</td><td style="text-align:right; font-weight:bold; color:#4ade80;">$${g("Amount($)")}</td></tr>
             </table>
         </div>
     `;
     frame.appendChild(hud);
 };
 
-// Port Coordinate File Upload Parser (XLSX / CSV)
+// XLSX/CSV Port Coordinates Reader
 window.handlePortCoordinateUpload = function(fileInput) {
     const file = fileInput.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const json = XLSX.utils.sheet_to_json(sheet);
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(sheet);
 
-        json.forEach(row => {
-            const key = row['Port'] || row['Country'];
-            if (key && row['Latitude'] && row['Longitude']) {
-                window.customCoords[key] = {
-                    lat: parseFloat(row['Latitude']),
-                    lng: parseFloat(row['Longitude'])
-                };
-            }
-        });
-        alert('Port Coordinates Loaded Successfully!');
-        window.recomputeViz();
+            json.forEach(row => {
+                const key = row['Port'] || row['Country'];
+                if (key && row['Latitude'] && row['Longitude']) {
+                    window.customCoords[String(key).trim()] = {
+                        lat: parseFloat(row['Latitude']),
+                        lng: parseFloat(row['Longitude'])
+                    };
+                }
+            });
+            alert('Port coordinates uploaded successfully!');
+            window.recomputeViz();
+        } catch(err) {
+            alert('Failed to parse coordinate file.');
+        }
     };
     reader.readAsArrayBuffer(file);
-};
-
-// Missing Coordinate Prompt Fallback
-window.promptMissingCoordinate = function(orig, dest) {
-    if (document.getElementById('coord-modal')) return;
-    const modal = document.createElement('div');
-    modal.id = 'coord-modal';
-    modal.className = 'coord-modal-overlay';
-    modal.innerHTML = `
-        <div class="coord-modal-content">
-            <h3>Missing Location Coordinates</h3>
-            <p>Enter coordinates for: <b>${orig}</b> or <b>${dest}</b></p>
-            <input type="text" id="manual-location-name" value="${orig}" placeholder="Location Name">
-            <input type="number" step="any" id="manual-lat" placeholder="Latitude (e.g. 51.505)">
-            <input type="number" step="any" id="manual-lng" placeholder="Longitude (e.g. -0.09)">
-            <button onclick="window.saveManualCoord()">Save Coordinate</button>
-        </div>
-    `;
-    document.body.appendChild(modal);
-};
-
-window.saveManualCoord = function() {
-    const loc = document.getElementById('manual-location-name').value;
-    const lat = parseFloat(document.getElementById('manual-lat').value);
-    const lng = parseFloat(document.getElementById('manual-lng').value);
-    if (loc && !isNaN(lat) && !isNaN(lng)) {
-        window.customCoords[loc] = { lat, lng };
-        document.getElementById('coord-modal').remove();
-        window.recomputeViz();
-    }
 };
